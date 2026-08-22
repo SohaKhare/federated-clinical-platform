@@ -263,6 +263,160 @@ Expected non-local-role response `403`:
 }
 ```
 
+### PATCH `/patients/:id`
+
+Purpose: Update patient data while preserving the previous values in a
+`patient_updated` event.
+
+Input:
+
+```json
+{
+  "symptoms": ["fever", "cough", "fatigue", "shortness of breath"],
+  "health_conditions": {
+    "bp": "128/82",
+    "sugar": "108mg/dL",
+    "allergies": ["penicillin"]
+  }
+}
+```
+
+Expected response `200`:
+
+```json
+{
+  "patient": {
+    "patient_id": "uuid",
+    "name": "Rekha Sharma",
+    "age": 34,
+    "sex": "F",
+    "symptoms": ["fever", "cough", "fatigue", "shortness of breath"],
+    "diagnosed_diseases": ["ICD10_J45"],
+    "health_conditions": {
+      "bp": "128/82",
+      "sugar": "108mg/dL",
+      "allergies": ["penicillin"]
+    },
+    "contributed_to_round": null,
+    "updated_at": "2026-08-22T10:40:00.000Z",
+    "created_at": "2026-08-22T10:15:00.000Z"
+  }
+}
+```
+
+The corresponding event is available through `GET /patients/:id/events`:
+
+```json
+{
+  "event_type": "patient_updated",
+  "event_data": {
+    "previous": {
+      "symptoms": ["fever", "cough", "fatigue"],
+      "health_conditions": {
+        "bp": "130/85",
+        "sugar": "110mg/dL",
+        "allergies": ["penicillin"]
+      }
+    },
+    "current": {
+      "symptoms": ["fever", "cough", "fatigue", "shortness of breath"],
+      "health_conditions": {
+        "bp": "128/82",
+        "sugar": "108mg/dL",
+        "allergies": ["penicillin"]
+      }
+    },
+    "changes": {
+      "symptoms": {
+        "previous": ["fever", "cough", "fatigue"],
+        "current": ["fever", "cough", "fatigue", "shortness of breath"]
+      },
+      "health_conditions": {
+        "previous": {
+          "bp": "130/85",
+          "sugar": "110mg/dL",
+          "allergies": ["penicillin"]
+        },
+        "current": {
+          "bp": "128/82",
+          "sugar": "108mg/dL",
+          "allergies": ["penicillin"]
+        }
+      }
+    }
+  }
+}
+```
+
+### GET `/patients/:id/events`
+
+Purpose: Return the patient's chronological clinical events.
+
+Input: Valid local session cookie and a patient UUID in the URL.
+
+Expected response `200`:
+
+```json
+{
+  "events": [
+    {
+      "event_id": "uuid",
+      "patient_id": "uuid",
+      "event_type": "treatment",
+      "event_data": {
+        "treatment": "Treatment A",
+        "outcome": "improving"
+      },
+      "occurred_at": "2026-08-22T10:30:00.000Z",
+      "created_at": "2026-08-22T10:30:00.000Z"
+    }
+  ]
+}
+```
+
+### POST `/patients/:id/events`
+
+Purpose: Append a clinical event to a patient history.
+
+Input:
+
+```json
+{
+  "eventType": "treatment",
+  "eventData": {
+    "treatment": "Treatment A",
+    "outcome": "improving"
+  },
+  "occurredAt": "2026-08-22T10:30:00.000Z"
+}
+```
+
+Expected response `201`:
+
+```json
+{
+  "event": {
+    "event_id": "uuid",
+    "patient_id": "uuid",
+    "event_type": "treatment",
+    "event_data": {
+      "treatment": "Treatment A",
+      "outcome": "improving"
+    },
+    "occurred_at": "2026-08-22T10:30:00.000Z",
+    "created_at": "2026-08-22T10:30:00.000Z"
+  }
+}
+```
+
+Invalid input response `400`:
+
+```json
+{
+  "message": "eventType and eventData are required."
+}
+```
+
 ### Current demo endpoints
 
 ### GET `/api/hospital/summary`
@@ -321,7 +475,6 @@ registered in `patient.routes.ts`. Add the route before testing it through HTTP.
 These API areas are described in `API.md` but are not currently wired in the
 Express backend:
 
-- Patient events
 - Model status, prediction, and metrics
 
 ### Federated and privacy APIs

@@ -29,6 +29,18 @@ create table if not exists public.patients (
 create index if not exists patients_updated_at_idx
   on public.patients (updated_at desc);
 
+create table if not exists public.patient_events (
+  event_id uuid primary key default gen_random_uuid(),
+  patient_id uuid not null references public.patients(patient_id) on delete cascade,
+  event_type text not null,
+  event_data jsonb not null default '{}'::jsonb,
+  occurred_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists patient_events_patient_occurred_idx
+  on public.patient_events (patient_id, occurred_at);
+
 create table if not exists public.logs (
   log_id uuid primary key default gen_random_uuid(),
   node_id text not null,
@@ -69,4 +81,5 @@ for each row execute function public.set_updated_at();
 
 alter table public.users enable row level security;
 alter table public.patients enable row level security;
+alter table public.patient_events enable row level security;
 alter table public.logs enable row level security;

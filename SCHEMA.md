@@ -1,11 +1,43 @@
 # Federated Clinical Intelligence — Data Schemas
 
-Two collections/tables per hospital node: **patients** and **logs**.
-No separate "weights" or "checkpoint" table — both are derived from these two.
+Four collections/tables per hospital node: **users**, **patients**,
+**patient_events**, and **logs**. No separate "weights" or "checkpoint" table —
+model versions and round updates are represented through log metadata.
+
+For the hackathon, one user represents one hospital. Every authenticated user
+has the `local` role; the hospital identity is stored on that user's profile.
 
 ---
 
-## 1. Patients Schema
+## 1. Users Schema
+
+The local hospital profile and authentication identity.
+
+```json
+{
+  "user_id": "4f14e45f-ceea-4f3e-b6a1-0d2a3c4e5f6a",
+  "google_id": "google-account-id",
+  "email": "hospital@example.com",
+  "picture": "https://...",
+  "role": "local",
+  "hospital_name": "AIIMS Delhi",
+  "pincode": "110029",
+  "geolocation": {
+    "latitude": 28.5672,
+    "longitude": 77.21
+  },
+  "created_at": "2026-08-22T10:00:00Z",
+  "updated_at": "2026-08-22T10:15:00Z"
+}
+```
+
+`hospital_name`, `pincode`, and `geolocation` are collected through the
+onboarding endpoint. The hospital name is not taken from Google's profile
+name.
+
+---
+
+## 2. Patients Schema
 
 Source of truth for hospital-local patient data. Never leaves the hospital.
 
@@ -23,7 +55,8 @@ Source of truth for hospital-local patient data. Never leaves the hospital.
     "allergies": ["penicillin"]
   },
   "contributed_to_round": 14,
-  "updated_at": "2026-08-22T10:15:00Z"
+  "updated_at": "2026-08-22T10:15:00Z",
+  "created_at": "2026-08-22T10:00:00Z"
 }
 ```
 
@@ -31,11 +64,56 @@ Source of truth for hospital-local patient data. Never leaves the hospital.
 
 - `contributed_to_round` — last training round this patient's data was included in. Not a "per-patient weight," just a marker.
 - `updated_at` — drives which patients are picked up for the _next_ training round (see query below).
-- On patient update/creation: only this record changes. No weight computation happens here.
+- On patient creation: only this record changes. No weight computation happens here.
+- On patient update: this record is changed and a `patient_updated` event is
+  appended in the same database transaction.
 
 ---
 
-## 2. Logs Schema (Global I/O + Rounds)
+## 3. Patient Events Schema
+
+Append-only clinical history for a patient. Patient updates also create an event
+with `event_type: "patient_updated"`; its `event_data` contains the previous
+snapshot, current snapshot, and field-level changes.
+
+```json
+{
+  "event_id": "c9a1...",
+  "patient_id": "8f14e45f-ceea-4f3e-b6a1-0d2a3c4e5f6a",
+  "event_type": "patient_updated",
+  "event_data": {
+    "previous": {
+      "name": "Rekha Sharma",
+      "age": 34,
+      "sex": "F",
+      "symptoms": ["fever"],
+      "diagnosed_diseases": ["ICD10_J45"],
+      "health_conditions": { "bp": "130/85" }
+    },
+    "current": {
+      "name": "Rekha Sharma",
+      "age": 34,
+      "sex": "F",
+      "symptoms": ["fever", "cough"],
+      "diagnosed_diseases": ["ICD10_J45"],
+      "health_conditions": { "bp": "128/82" }
+    },
+    "changes": {
+      "symptoms": {
+        "previous": ["fever"],
+        "current": ["fever", "cough"]
+      }
+    }
+  },
+  "occurred_at": "2026-08-22T10:20:00Z",
+  "created_at": "2026-08-22T10:20:00Z"
+}
+```
+
+Events are stored locally and linked to `patients.patient_id`. Deleting a
+patient deletes its events.
+
+## 4. Logs Schema (Global I/O + Rounds)
 
 One row per round per direction (outgoing = hospital → global, incoming = global → hospital).
 This table also acts as the "was it sent" and "last successful round" tracker — no separate table needed.

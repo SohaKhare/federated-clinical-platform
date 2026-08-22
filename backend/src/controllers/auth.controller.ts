@@ -2,39 +2,27 @@ import crypto from "node:crypto";
 
 import type { Request, Response } from "express";
 
-import { isValidRole, type UserRole } from "../auth/roles.js";
 import {
   getGoogleClient,
   getGoogleClientId,
 } from "../services/google-auth.service.js";
 import { upsertLocalUser } from "../services/user.service.js";
 
-function isValidNode(value: string): value is UserRole {
-  return isValidRole(value);
-}
-
 /**
  * Start Google OAuth login.
  *
- * GET /auth/google/local
- * GET /auth/google/global
+ * GET /auth/google
+ *
+ * Every login creates/authenticates a "local" user. A user is promoted to
+ * "global" by manually updating their role in the database.
  */
 export function loginWithGoogle(req: Request, res: Response) {
-  const { node } = req.params;
-
-  if (typeof node !== "string" || !isValidNode(node)) {
-    return res.status(400).json({
-      message: "Invalid node type. Use local or global.",
-    });
-  }
-
   // Generate OAuth state to protect against CSRF.
   const state = crypto.randomUUID();
 
   req.session.oauthState = state;
-  req.session.oauthNode = node;
 
-  const client = getGoogleClient(node);
+  const client = getGoogleClient();
 
   const authorizationUrl = client.generateAuthUrl({
     access_type: "online",
@@ -49,28 +37,11 @@ export function loginWithGoogle(req: Request, res: Response) {
 /**
  * Handle Google's OAuth callback.
  *
- * GET /auth/google/local/callback
- * GET /auth/google/global/callback
+ * GET /auth/google/callback
  */
 export async function googleCallback(req: Request, res: Response) {
   try {
-    const { node } = req.params;
     const { code, state } = req.query;
-
-    // Validate node.
-    if (typeof node !== "string" || !isValidNode(node)) {
-      return res.status(400).json({
-        message: "Invalid node type. Use local or global.",
-      });
-    }
-
-    // Make sure the callback belongs to
-    // the same OAuth flow that was started.
-    if (req.session.oauthNode !== node) {
-      return res.status(400).json({
-        message: "OAuth node mismatch.",
-      });
-    }
 
     // Google must provide an authorization code.
     if (!code || typeof code !== "string") {
@@ -90,7 +61,7 @@ export async function googleCallback(req: Request, res: Response) {
       });
     }
 
-    const client = getGoogleClient("local");
+    const client = getGoogleClient();
 
     // Exchange authorization code for tokens.
     const { tokens } = await client.getToken(code);
@@ -106,7 +77,7 @@ export async function googleCallback(req: Request, res: Response) {
     // Verify the Google ID token.
     const ticket = await client.verifyIdToken({
       idToken: tokens.id_token,
-      audience: getGoogleClientId("local"),
+      audience: getGoogleClientId(),
     });
 
     const payload = ticket.getPayload();
@@ -125,7 +96,6 @@ export async function googleCallback(req: Request, res: Response) {
 
     // OAuth information is no longer needed.
     delete req.session.oauthState;
-    delete req.session.oauthNode;
 
     /*
      * Redirect the user back to Next.js.

@@ -10,8 +10,11 @@ const requiredEnv = (name: string): string => {
   return value;
 };
 
+const port = Number(process.env.PORT ?? 5000);
+const backendUrl = process.env.BACKEND_URL ?? `http://localhost:${port}`;
+
 export const env = {
-  port: Number(process.env.PORT ?? 5000),
+  port,
 
   nodeEnv: process.env.NODE_ENV ?? "development",
 
@@ -21,15 +24,9 @@ export const env = {
 
   databaseUrl: requiredEnv("DATABASE_URL"),
 
-  localGoogle: {
+  google: {
     clientId: requiredEnv("LOCAL_GOOGLE_CLIENT_ID"),
     clientSecret: requiredEnv("LOCAL_GOOGLE_CLIENT_SECRET"),
-    redirectUri: "http://localhost:5000/auth/google/local/callback",
-  },
-
-  globalGoogle: {
-    clientId: requiredEnv("GLOBAL_GOOGLE_CLIENT_ID"),
-    clientSecret: requiredEnv("GLOBAL_GOOGLE_CLIENT_SECRET"),
-    redirectUri: "http://localhost:5000/auth/google/global/callback",
+    redirectUri: `${backendUrl}/auth/google/callback`,
   },
 };

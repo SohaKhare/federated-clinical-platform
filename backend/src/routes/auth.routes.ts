@@ -12,9 +12,9 @@ import { requireAuth, requireRole } from "../middleware/auth.middleware.js";
 const router = Router();
 
 // Google OAuth
-router.get("/google/:node", loginWithGoogle);
+router.get("/google", loginWithGoogle);
 
-router.get("/google/:node/callback", googleCallback);
+router.get("/google/callback", googleCallback);
 
 // Application authentication
 router.get("/me", getCurrentUser);

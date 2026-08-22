@@ -35,6 +35,7 @@ The Local Node runs inside a participating hospital. It can access that hospital
 | `GET` | `/patients` | List authorized local patients with pagination and filters. |
 | `POST` | `/patients` | Create a local patient record. |
 | `GET` | `/patients/{id}` | Return one local patient's profile. |
+| `PATCH` | `/patients/{id}` | Update a patient and append a before/current/change event snapshot. |
 | `GET` | `/patients/{id}/events` | Return that patient's chronological clinical events. |
 | `POST` | `/patients/{id}/events` | Append a clinical event without overwriting history. |
 

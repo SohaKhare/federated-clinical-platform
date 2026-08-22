@@ -1,22 +1,15 @@
 import { google } from "googleapis";
 
 import { env } from "../config/env.js";
-import type { UserRole } from "../auth/roles.js";
 
-export type { UserRole };
-
-export function getGoogleClient(node: UserRole) {
-  const config = node === "local" ? env.localGoogle : env.globalGoogle;
-
+export function getGoogleClient() {
   return new google.auth.OAuth2(
-    config.clientId,
-    config.clientSecret,
-    config.redirectUri,
+    env.google.clientId,
+    env.google.clientSecret,
+    env.google.redirectUri,
   );
 }
 
-export function getGoogleClientId(node: UserRole): string {
-  return node === "local"
-    ? env.localGoogle.clientId
-    : env.globalGoogle.clientId;
+export function getGoogleClientId(): string {
+  return env.google.clientId;
 }
