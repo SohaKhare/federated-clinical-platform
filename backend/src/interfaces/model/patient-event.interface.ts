@@ -16,9 +16,8 @@ export interface PatientEvent {
 }
 
 export interface PatientChangeEventData {
-  previous: PatientEventSnapshot;
   current: PatientEventSnapshot;
-  changes: Record<string, { previous: unknown; current: unknown }>;
+  previous_snapshots: PatientEventSnapshot[];
 }
 
 export interface PatientEventSnapshot {

@@ -3,15 +3,35 @@ import type { Request, Response } from "express";
 import {
   createPatient as createPatientRecord,
   addPatientEvent as addPatientEventRecord,
+  getPatientById as getPatientByIdRecord,
   getPatientEvents as getPatientEventsRecords,
   getPatients as getPatientRecords,
   updatePatient as updatePatientRecord,
 } from "../../services/local-node-service/patient.service.js";
 import type {
   CreatePatientInput,
+  Patient,
   UpdatePatientInput,
 } from "../../interfaces/model/patient.interface.js";
 import type { CreatePatientEventInput } from "../../interfaces/model/patient-event.interface.js";
+
+/**
+ * requireAuth + requireRole("local") run before every handler in this file,
+ * so req.session.user is always present here.
+ */
+function getHospitalId(req: Request): string {
+  return req.session.user!.userId;
+}
+
+/**
+ * hospital_id is only used internally to enforce ownership.
+ * It must never appear in an API response.
+ */
+function stripHospitalId(patient: Patient): Omit<Patient, "hospital_id"> {
+  const { hospital_id: _hospitalId, ...rest } = patient;
+
+  return rest;
+}
 
 export async function createPatient(req: Request, res: Response) {
   if (!isCreatePatientInput(req.body)) {
@@ -22,9 +42,9 @@ export async function createPatient(req: Request, res: Response) {
   }
 
   try {
-    const patient = await createPatientRecord(req.body);
+    const patient = await createPatientRecord(req.body, getHospitalId(req));
 
-    return res.status(201).json({ patient });
+    return res.status(201).json({ patient: stripHospitalId(patient) });
   } catch (error) {
     console.error("Patient creation error:", error);
 
@@ -34,11 +54,11 @@ export async function createPatient(req: Request, res: Response) {
   }
 }
 
-export async function getPatients(_req: Request, res: Response) {
+export async function getPatients(req: Request, res: Response) {
   try {
-    const patients = await getPatientRecords();
+    const patients = await getPatientRecords(getHospitalId(req));
 
-    return res.json({ patients });
+    return res.json({ patients: patients.map(stripHospitalId) });
   } catch (error) {
     console.error("Patient fetch error:", error);
 
@@ -51,17 +71,20 @@ export async function getPatients(_req: Request, res: Response) {
 export async function getPatientById(req: Request, res: Response) {
   const { id } = req.params;
 
-  try {
-    const patients = await getPatientRecords();
-    const patient = patients.find((p) => p.patient_id === id);
+  if (typeof id !== "string") {
+    return res.status(400).json({ message: "Invalid patient ID." });
+  }
 
-    if (!patient) {
+  try {
+    const patient = await getPatientByIdRecord(id);
+
+    if (!patient || patient.hospital_id !== getHospitalId(req)) {
       return res.status(404).json({
         message: "Patient not found.",
       });
     }
 
-    return res.json({ patient });
+    return res.json({ patient: stripHospitalId(patient) });
   } catch (error) {
     console.error("Patient fetch error:", error);
 
@@ -72,20 +95,26 @@ export async function getPatientById(req: Request, res: Response) {
 }
 
 export async function updatePatient(req: Request, res: Response) {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
 
   if (typeof id !== "string" || !isUpdatePatientInput(req.body)) {
     return res.status(400).json({ message: "Invalid patient update." });
   }
 
   try {
+    const existingPatient = await getPatientByIdRecord(id);
+
+    if (!existingPatient || existingPatient.hospital_id !== getHospitalId(req)) {
+      return res.status(404).json({ message: "Patient not found." });
+    }
+
     const patient = await updatePatientRecord(id, req.body);
 
     if (!patient) {
       return res.status(404).json({ message: "Patient not found." });
     }
 
-    return res.json({ patient });
+    return res.json({ patient: stripHospitalId(patient) });
   } catch (error) {
     console.error("Patient update error:", error);
 
@@ -101,6 +130,12 @@ export async function getPatientEvents(req: Request, res: Response) {
   }
 
   try {
+    const patient = await getPatientByIdRecord(id);
+
+    if (!patient || patient.hospital_id !== getHospitalId(req)) {
+      return res.status(404).json({ message: "Patient not found." });
+    }
+
     const events = await getPatientEventsRecords(id);
 
     return res.json({ events });
@@ -125,6 +160,12 @@ export async function addPatientEvent(req: Request, res: Response) {
   }
 
   try {
+    const patient = await getPatientByIdRecord(id);
+
+    if (!patient || patient.hospital_id !== getHospitalId(req)) {
+      return res.status(404).json({ message: "Patient not found." });
+    }
+
     const event = await addPatientEventRecord(id, req.body);
 
     return res.status(201).json({ event });

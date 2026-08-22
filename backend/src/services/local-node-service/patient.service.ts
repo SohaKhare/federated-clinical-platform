@@ -9,13 +9,16 @@ import type {
   CreatePatientEventInput,
   PatientChangeEventData,
   PatientEvent,
+  PatientEventSnapshot,
 } from "../../interfaces/model/patient-event.interface.js";
 
 export async function createPatient(
   patient: CreatePatientInput,
+  hospitalId: string,
 ): Promise<Patient> {
   const createdPatient = await prisma.patient.create({
     data: {
+      hospitalId,
       name: patient.name,
       age: patient.age,
       sex: patient.sex,
@@ -28,12 +31,23 @@ export async function createPatient(
   return toPatient(createdPatient);
 }
 
-export async function getPatients(): Promise<Patient[]> {
+export async function getPatients(hospitalId: string): Promise<Patient[]> {
   const patients = await prisma.patient.findMany({
+    where: { hospitalId },
     orderBy: { updatedAt: "desc" },
   });
 
   return patients.map(toPatient);
+}
+
+export async function getPatientById(
+  patientId: string,
+): Promise<Patient | null> {
+  const patient = await prisma.patient.findUnique({
+    where: { patientId },
+  });
+
+  return patient ? toPatient(patient) : null;
 }
 
 export async function updatePatient(
@@ -49,7 +63,7 @@ export async function updatePatient(
       return null;
     }
 
-    const previous = toPatient(existingPatient);
+    const previous = toSnapshot(toPatient(existingPatient));
     const patient = await transaction.patient.update({
       where: { patientId },
       data: {
@@ -65,36 +79,20 @@ export async function updatePatient(
           : {}),
       },
     });
-    const current = toPatient(patient);
+    const current = toSnapshot(toPatient(patient));
 
-    const changes = Object.fromEntries(
-      Object.entries({
-        name: [previous.name, current.name],
-        age: [previous.age, current.age],
-        sex: [previous.sex, current.sex],
-        symptoms: [previous.symptoms, current.symptoms],
-        diagnosed_diseases: [
-          previous.diagnosed_diseases,
-          current.diagnosed_diseases,
-        ],
-        health_conditions: [
-          previous.health_conditions,
-          current.health_conditions,
-        ],
-      })
-        .filter(([, [oldValue, newValue]]) =>
-          JSON.stringify(oldValue) !== JSON.stringify(newValue),
-        )
-        .map(([field, [oldValue, newValue]]) => [
-          field,
-          { previous: oldValue, current: newValue },
-        ]),
-    );
+    // Stack up every prior snapshot: the most recent one goes on top,
+    // ahead of whatever the last patient_updated event had already stacked.
+    const lastUpdateEvent = await transaction.patientEvent.findFirst({
+      where: { patientId, eventType: "patient_updated" },
+      orderBy: { occurredAt: "desc" },
+    });
+
+    const priorSnapshots = getPreviousSnapshots(lastUpdateEvent?.eventData);
 
     const eventData: PatientChangeEventData = {
-      previous,
       current,
-      changes,
+      previous_snapshots: [previous, ...priorSnapshots],
     };
 
     await transaction.patientEvent.create({
@@ -140,6 +138,7 @@ export async function addPatientEvent(
 
 function toPatient(patient: {
   patientId: string;
+  hospitalId: string;
   name: string;
   age: number;
   sex: string;
@@ -152,6 +151,7 @@ function toPatient(patient: {
 }): Patient {
   return {
     patient_id: patient.patientId,
+    hospital_id: patient.hospitalId,
     name: patient.name,
     age: patient.age,
     sex: patient.sex,
@@ -162,6 +162,30 @@ function toPatient(patient: {
     updated_at: patient.updatedAt.toISOString(),
     created_at: patient.createdAt.toISOString(),
   };
+}
+
+function toSnapshot(patient: Patient): PatientEventSnapshot {
+  return {
+    name: patient.name,
+    age: patient.age,
+    sex: patient.sex,
+    symptoms: patient.symptoms,
+    diagnosed_diseases: patient.diagnosed_diseases,
+    health_conditions: patient.health_conditions,
+  };
+}
+
+function getPreviousSnapshots(eventData: JsonValue | undefined): PatientEventSnapshot[] {
+  if (
+    !eventData ||
+    typeof eventData !== "object" ||
+    Array.isArray(eventData) ||
+    !Array.isArray((eventData as { previous_snapshots?: unknown }).previous_snapshots)
+  ) {
+    return [];
+  }
+
+  return (eventData as unknown as PatientChangeEventData).previous_snapshots;
 }
 
 function toPatientEvent(event: {

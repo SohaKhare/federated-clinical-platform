@@ -19,12 +19,15 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  patients Patient[]
+
   @@index([userId])
   @@map("users")
 }
 
 model Patient {
   patientId          String   @id @default(uuid()) @map("patient_id") @db.Uuid
+  hospitalId         String   @map("hospital_id") @db.Uuid
   name               String
   age                Int
   sex                String
@@ -34,9 +37,10 @@ model Patient {
   contributedToRound Int?     @map("contributed_to_round")
   updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
   createdAt          DateTime @default(now()) @map("created_at")
+  hospital           User           @relation(fields: [hospitalId], references: [userId], onDelete: Cascade)
   events             PatientEvent[]
 
-  @@index([updatedAt])
+  @@index([hospitalId, updatedAt])
   @@map("patients")
 }
 

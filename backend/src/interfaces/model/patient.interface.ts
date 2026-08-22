@@ -3,7 +3,6 @@ export interface HealthConditions {
 }
 
 export interface CreatePatientInput {
-  patient_id?: string;
   name: string;
   age: number;
   sex: string;
@@ -23,6 +22,7 @@ export interface UpdatePatientInput {
 
 export interface Patient extends CreatePatientInput {
   patient_id: string;
+  hospital_id: string;
   contributed_to_round: number | null;
   updated_at: string;
   created_at: string;

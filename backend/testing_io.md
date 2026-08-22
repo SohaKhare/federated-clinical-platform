@@ -265,7 +265,7 @@ Expected non-local-role response `403`:
 
 ### PATCH `/patients/:id`
 
-Purpose: Update patient data while preserving the previous values in a
+Purpose: Update patient data while stacking the previous snapshot into a
 `patient_updated` event.
 
 Input:
@@ -310,43 +310,40 @@ The corresponding event is available through `GET /patients/:id/events`:
 {
   "event_type": "patient_updated",
   "event_data": {
-    "previous": {
-      "symptoms": ["fever", "cough", "fatigue"],
-      "health_conditions": {
-        "bp": "130/85",
-        "sugar": "110mg/dL",
-        "allergies": ["penicillin"]
-      }
-    },
     "current": {
+      "name": "Rekha Sharma",
+      "age": 34,
+      "sex": "F",
       "symptoms": ["fever", "cough", "fatigue", "shortness of breath"],
+      "diagnosed_diseases": ["ICD10_J45"],
       "health_conditions": {
         "bp": "128/82",
         "sugar": "108mg/dL",
         "allergies": ["penicillin"]
       }
     },
-    "changes": {
-      "symptoms": {
-        "previous": ["fever", "cough", "fatigue"],
-        "current": ["fever", "cough", "fatigue", "shortness of breath"]
-      },
-      "health_conditions": {
-        "previous": {
+    "previous_snapshots": [
+      {
+        "name": "Rekha Sharma",
+        "age": 34,
+        "sex": "F",
+        "symptoms": ["fever", "cough", "fatigue"],
+        "diagnosed_diseases": ["ICD10_J45"],
+        "health_conditions": {
           "bp": "130/85",
           "sugar": "110mg/dL",
           "allergies": ["penicillin"]
-        },
-        "current": {
-          "bp": "128/82",
-          "sugar": "108mg/dL",
-          "allergies": ["penicillin"]
         }
       }
-    }
+    ]
   }
 }
 ```
+
+`current` is always the full patient state right after this update.
+`previous_snapshots` is a stack of every earlier full snapshot, most recent
+first — each additional update prepends one more entry, so the array grows
+over the patient's history instead of just showing a diff.
 
 ### GET `/patients/:id/events`
 
