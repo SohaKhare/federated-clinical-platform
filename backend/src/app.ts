@@ -6,6 +6,7 @@ import demoRoutes from "./routes/demo.routes.js";
 import { env } from "./config/env.js";
 import patientRoutes from "./routes/patient.routes.js";
 import nodeRoutes from "./routes/node.routes.js";
+import logRoutes from "./routes/log.routes.js";
 
 const app = express();
 
@@ -57,6 +58,8 @@ app.use("/auth", authRoutes);
 app.use("/patients", patientRoutes);
 
 app.use("/nodes", nodeRoutes);
+
+app.use("/logs", logRoutes);
 
 app.use("/api", demoRoutes);
 

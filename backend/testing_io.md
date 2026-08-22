@@ -49,17 +49,17 @@ Expected response `200`:
 
 ### Authentication endpoints
 
-### GET `/auth/google/local`
+### GET `/auth/google`
 
-Purpose: Start Google OAuth for a local hospital user.
+Purpose: Start Google OAuth. Every login authenticates a `local` user — a
+user is only ever promoted to `global` by manually updating their role in
+the database.
 
 Input: None.
 
 Expected behavior: Redirects to Google and stores OAuth state in the session.
 
-### GET `/auth/google/:node/callback`
-
-Supported `node` value: `local`.
+### GET `/auth/google/callback`
 
 Query input:
 
@@ -71,13 +71,14 @@ Expected behavior:
 
 - Exchanges the authorization code with Google.
 - Verifies the Google ID token.
-- Creates or updates a local user in the database.
+- Creates or updates a user in the database (role stays whatever it already
+  was — `local` by default, `global` only if manually set).
 - Stores the authenticated user in the session.
 - Redirects to `/dashboard` on the frontend.
 
 Failure responses:
 
-- `400` invalid node, OAuth node mismatch, missing code, or invalid state
+- `400` missing code or invalid/mismatched state
 - `401` missing ID token or unverifiable Google account
 - `500` OAuth/database failure
 
@@ -404,6 +405,63 @@ Invalid input response `400`:
 }
 ```
 
+### Local aggregates and records
+
+Auth: Authenticated local user only.
+
+### GET `/logs`
+
+Purpose: Return this hospital's own federated-round activity log
+(`node_id` is always the caller's own `userId` — one hospital never sees
+another's logs).
+
+Query params (all optional):
+
+- `direction` — `outgoing` or `incoming`
+- `status` — `pending`, `confirmed`, or `failed`
+- `round` — non-negative integer, exact round match
+- `page` — positive integer, default `1`
+- `pageSize` — positive integer, default `20`, max `200`
+
+Expected response `200` (ordered newest round first). `pagination.total`/
+`totalPages` reflect the filtered count (i.e. after `direction`/`status`/
+`round` are applied, not the hospital's total log count):
+
+```json
+{
+  "logs": [
+    {
+      "log_id": "uuid",
+      "node_id": "uuid",
+      "timestamp": "2026-08-22T10:20:00.000Z",
+      "direction": "outgoing",
+      "round": 14,
+      "metadata": { "num_examples": 4213 },
+      "status": "confirmed",
+      "created_at": "2026-08-22T10:20:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "pageSize": 20,
+    "total": 47,
+    "totalPages": 3
+  }
+}
+```
+
+Invalid query response `400`:
+
+```json
+{
+  "message": "Invalid query. direction must be 'outgoing' or 'incoming', status must be 'pending', 'confirmed', or 'failed', round must be a non-negative integer, page must be a positive integer, and pageSize must be a positive integer up to 200."
+}
+```
+
+Note: nothing currently writes to the `logs` table (the Python federated
+package is still a scaffold), so this will return `{"logs": []}` until a
+federated round actually runs and logs something.
+
 ### Current demo endpoints
 
 ### GET `/api/hospital/summary`
@@ -437,7 +495,7 @@ Expected response `200`:
 ### Basic test sequence
 
 1. Start the backend with `npm run dev`.
-2. Open `GET /auth/google/local` and complete Google login.
+2. Open `GET /auth/google` and complete Google login.
 3. Call `GET /auth/me` and confirm `role` is `local`.
 4. Call `POST /auth/onboarding` with hospital details.
 5. Call `POST /patients` with a valid patient body.
@@ -450,27 +508,21 @@ Expected response `200`:
 
 These items are planned but are not currently available through the backend.
 
-### Patient APIs
-
-`GET /patients/:id`
-
-A controller exists for fetching one patient, but this endpoint is not yet
-registered in `patient.routes.ts`. Add the route before testing it through HTTP.
-
 ### Clinical and model APIs
 
 These API areas are described in `API.md` but are not currently wired in the
 Express backend:
 
-- Model status, prediction, and metrics
+- Model status, prediction, and metrics — blocked on the Python federated
+  package, which is still an empty scaffold (no trained model to call).
 
 ### Federated and privacy APIs
 
-- Federated status/round/history/participation APIs
+- Federated status/round/history/participation APIs (local-node side)
 - Privacy status and parameters
 
 ### Research and operations APIs
 
 - Research and heatmap APIs
-- Logs and audit APIs
-- Global node management APIs
+- Audit trail API (`GET /audit`) — distinct from `GET /logs` above, which is
+  already implemented.
