@@ -1,17 +1,18 @@
-import "express-session";
+import type { UserRole } from "../auth/roles.js";
 
 declare module "express-session" {
   interface SessionData {
     oauthState?: string;
 
-    oauthNode?: "local" | "global";
+    oauthNode?: UserRole;
 
     user?: {
       googleId: string;
       email: string;
       name?: string;
       picture?: string;
-      node: "local" | "global";
+      node: UserRole;
+      role: UserRole;
     };
   }
 }

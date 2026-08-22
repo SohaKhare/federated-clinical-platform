@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import session from "express-session";
 import authRoutes from "./routes/auth.routes.js";
+import demoRoutes from "./routes/demo.routes.js";
 import { env } from "./config/env.js";
 
 const app = express();
@@ -50,5 +51,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/auth", authRoutes);
+
+app.use("/api", demoRoutes);
 
 export default app;

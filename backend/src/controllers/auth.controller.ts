@@ -2,14 +2,14 @@ import crypto from "node:crypto";
 
 import type { Request, Response } from "express";
 
+import { isValidRole, type UserRole } from "../auth/roles.js";
 import {
   getGoogleClient,
   getGoogleClientId,
-  type GoogleNode,
 } from "../services/google-auth.service.js";
 
-function isValidNode(value: string): value is GoogleNode {
-  return value === "local" || value === "global";
+function isValidNode(value: string): value is UserRole {
+  return isValidRole(value);
 }
 
 /**
@@ -121,6 +121,7 @@ export async function googleCallback(req: Request, res: Response) {
       googleId: payload.sub,
       email: payload.email,
       node,
+      role: node,
       ...(payload.name !== undefined ? { name: payload.name } : {}),
       ...(payload.picture !== undefined ? { picture: payload.picture } : {}),
     };
