@@ -1,2 +1,4 @@
 def main() -> None:
-    print("Hello from federated!")
+    from federated.model.baseline import train_and_evaluate_baseline
+
+    train_and_evaluate_baseline()
