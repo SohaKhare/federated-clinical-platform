@@ -1,0 +1,30 @@
+.appLayout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  background-color: var(--bg-dashboard);
+  overflow: hidden;
+}
+
+.sidebarWrapper {
+  padding: 1rem 0;
+  border-right: 1px solid #f0f0f0;
+}
+
+.mainWrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  overflow: hidden;
+}
+
+.headerWrapper {
+  margin-bottom: 1.5rem;
+}
+
+.contentWrapper {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}

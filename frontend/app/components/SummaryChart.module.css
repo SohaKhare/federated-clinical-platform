@@ -1,0 +1,245 @@
+.chartWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tabSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tab {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  transition: all 0.2s ease;
+}
+
+.tab.active {
+  background-color: var(--color-green-light);
+  color: #2b5c56;
+}
+
+.addTab {
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0 0.5rem;
+}
+
+.tabActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.iconBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-main);
+  background-color: #f5f5f5;
+  cursor: pointer;
+}
+
+.chartContainer {
+  background-color: var(--color-green-light);
+  border-radius: var(--radius-main);
+  padding: 1.5rem;
+  padding-bottom: 3rem;
+  display: flex;
+  flex-direction: column;
+  height: 310px;
+}
+
+.chartHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.badge {
+  background-color: rgba(0,0,0,0.05);
+  color: #2b5c56;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  width: fit-content;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.title {
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: var(--color-text-main);
+  letter-spacing: -0.02em;
+}
+
+.headerRight {
+  display: flex;
+  gap: 1rem;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: #4a6c68;
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-text-main);
+}
+
+.legendDotLight {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ffffff;
+}
+
+.contentArea {
+  display: flex;
+  gap: 1.5rem;
+  flex: 1;
+}
+
+.statsCard {
+  background-color: rgba(255, 255, 255, 0.4);
+  border-radius: 20px;
+  padding: 1rem;
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.statLine {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.statName {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #2b5c56;
+}
+
+.statValueRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bigNum {
+  font-size: 1.8rem;
+  font-weight: 500;
+  color: var(--color-text-main);
+  line-height: 1;
+}
+
+.plusBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  color: var(--color-text-main);
+}
+
+.divider {
+  height: 1px;
+  background-color: rgba(0,0,0,0.05);
+  width: 100%;
+}
+
+.statActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.actionBtn {
+  font-size: 0.75rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  background-color: #fff;
+  color: var(--color-text-main);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.dots {
+  font-size: 1rem;
+  color: var(--color-text-main);
+  padding: 0 0.2rem;
+  letter-spacing: 1px;
+  line-height: 0.5;
+}
+
+.barArea {
+  flex: 1;
+  padding-bottom: 0.5rem;
+}
+
+.verticalActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background-color: rgba(255,255,255,0.4);
+  padding: 0.5rem;
+  border-radius: 20px;
+}
+
+.vIconBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-main);
+  font-size: 0.8rem;
+}
+
+.vIconBtnActive {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-text-main);
+  color: #fff;
+}
