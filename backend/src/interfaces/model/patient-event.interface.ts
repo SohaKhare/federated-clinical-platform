@@ -15,16 +15,13 @@ export interface PatientEvent {
   created_at: string;
 }
 
-export interface PatientChangeEventData {
-  current: PatientEventSnapshot;
-  previous_snapshots: PatientEventSnapshot[];
-}
-
-export interface PatientEventSnapshot {
-  name: string;
-  age: number;
-  sex: string;
-  symptoms: string[];
-  diagnosed_diseases: string[];
-  health_conditions: HealthConditions;
-}
+/**
+ * System-managed event types that carry a full ClinicalSnapshot as their
+ * event_data. Reserved: a client can never create one of these directly
+ * through POST /patients/:id/events, since a hand-crafted payload of the
+ * wrong shape would corrupt "current clinical state" lookups.
+ */
+export const CLINICAL_SNAPSHOT_EVENT_TYPES = [
+  "patient_created",
+  "patient_updated",
+] as const;

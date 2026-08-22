@@ -169,7 +169,10 @@ the global node.
 
 ### POST `/patients`
 
-Purpose: Create a patient record in the local database.
+Purpose: Create a patient record in the local database. Internally this also
+writes a `patient_created` event carrying the initial clinical snapshot
+(`symptoms`/`diagnosed_diseases`/`health_conditions`), visible right away via
+`GET /patients/:id/events` — the response below is unaffected.
 
 Input:
 
@@ -265,8 +268,11 @@ Expected non-local-role response `403`:
 
 ### PATCH `/patients/:id`
 
-Purpose: Update patient data while stacking the previous snapshot into a
-`patient_updated` event.
+Purpose: Update patient data. Changes to `name`/`age`/`sex` update the
+patient record directly; changes to `symptoms`/`diagnosed_diseases`/
+`health_conditions` are recorded as a new `patient_updated` event instead
+(clinical data is never stored on the patient record itself — see
+`SCHEMA.md`). The response always returns the full merged view either way.
 
 Input:
 
@@ -310,40 +316,24 @@ The corresponding event is available through `GET /patients/:id/events`:
 {
   "event_type": "patient_updated",
   "event_data": {
-    "current": {
-      "name": "Rekha Sharma",
-      "age": 34,
-      "sex": "F",
-      "symptoms": ["fever", "cough", "fatigue", "shortness of breath"],
-      "diagnosed_diseases": ["ICD10_J45"],
-      "health_conditions": {
-        "bp": "128/82",
-        "sugar": "108mg/dL",
-        "allergies": ["penicillin"]
-      }
-    },
-    "previous_snapshots": [
-      {
-        "name": "Rekha Sharma",
-        "age": 34,
-        "sex": "F",
-        "symptoms": ["fever", "cough", "fatigue"],
-        "diagnosed_diseases": ["ICD10_J45"],
-        "health_conditions": {
-          "bp": "130/85",
-          "sugar": "110mg/dL",
-          "allergies": ["penicillin"]
-        }
-      }
-    ]
+    "symptoms": ["fever", "cough", "fatigue", "shortness of breath"],
+    "diagnosed_diseases": ["ICD10_J45"],
+    "health_conditions": {
+      "bp": "128/82",
+      "sugar": "108mg/dL",
+      "allergies": ["penicillin"]
+    }
   }
 }
 ```
 
-`current` is always the full patient state right after this update.
-`previous_snapshots` is a stack of every earlier full snapshot, most recent
-first — each additional update prepends one more entry, so the array grows
-over the patient's history instead of just showing a diff.
+`event_data` is just the flat clinical state right after this update — no
+diff, no wrapper. The patient's current clinical state is always whichever
+`patient_created`/`patient_updated` event is most recent; the full history
+is the ordered list `GET /patients/:id/events` already returns.
+`patient_created` and `patient_updated` are reserved event types — a
+`POST /patients/:id/events` call using either of those two names as
+`eventType` is rejected with `400`.
 
 ### GET `/patients/:id/events`
 

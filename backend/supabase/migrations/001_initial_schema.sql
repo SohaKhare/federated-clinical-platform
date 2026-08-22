@@ -15,19 +15,17 @@ create table if not exists public.users (
 
 create table if not exists public.patients (
   patient_id uuid primary key default gen_random_uuid(),
+  hospital_id uuid not null references public.users(user_id) on delete cascade,
   name text not null,
   age integer not null check (age >= 0),
   sex text not null,
-  symptoms text[] not null default '{}',
-  diagnosed_diseases text[] not null default '{}',
-  health_conditions jsonb not null default '{}'::jsonb,
   contributed_to_round integer check (contributed_to_round >= 0),
   updated_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
 
-create index if not exists patients_updated_at_idx
-  on public.patients (updated_at desc);
+create index if not exists patients_hospital_id_updated_at_idx
+  on public.patients (hospital_id, updated_at desc);
 
 create table if not exists public.patient_events (
   event_id uuid primary key default gen_random_uuid(),

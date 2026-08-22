@@ -42,7 +42,10 @@ name.
 
 ## 2. Patients Schema
 
-Source of truth for hospital-local patient data. Never leaves the hospital.
+Identity and administrative record for a hospital-local patient. Never leaves
+the hospital. **Clinical data (symptoms, diagnoses, health conditions) is not
+stored here** — see §3. This table only holds fields that don't need a
+version history.
 
 ```json
 {
@@ -51,13 +54,6 @@ Source of truth for hospital-local patient data. Never leaves the hospital.
   "name": "Rekha Sharma",
   "age": 34,
   "sex": "F",
-  "symptoms": ["fever", "cough", "fatigue"],
-  "diagnosed_diseases": ["ICD10_J45"],
-  "health_conditions": {
-    "bp": "130/85",
-    "sugar": "110mg/dL",
-    "allergies": ["penicillin"]
-  },
   "contributed_to_round": 14,
   "updated_at": "2026-08-22T10:15:00Z",
   "created_at": "2026-08-22T10:00:00Z"
@@ -73,19 +69,30 @@ Source of truth for hospital-local patient data. Never leaves the hospital.
   responses; every patient read/write is scoped to it so one hospital can
   never see or modify another hospital's patients.
 - `contributed_to_round` — last training round this patient's data was included in. Not a "per-patient weight," just a marker.
-- `updated_at` — drives which patients are picked up for the _next_ training round (see query below).
-- On patient creation: only this record changes. No weight computation happens here.
-- On patient update: this record is changed and a `patient_updated` event is
-  appended in the same database transaction.
+- `updated_at` — bumped on **any** change to this patient (identity fields
+  here, or a clinical change recorded in `patient_events`) — drives which
+  patients are picked up for the _next_ training round (see query below).
+- The API's `GET`/`POST`/`PATCH /patients` responses still return a single
+  merged object with `symptoms`, `diagnosed_diseases`, and
+  `health_conditions` included — the client-facing shape hasn't changed,
+  only where those fields are actually stored server-side (see §3).
 
 ---
 
 ## 3. Patient Events Schema
 
-Append-only clinical history for a patient. Patient updates also create an
-event with `event_type: "patient_updated"`; its `event_data` holds the full
-current snapshot plus a stack of every prior snapshot — most recent first —
-instead of a computed diff.
+Append-only clinical history for a patient — and the **only place clinical
+data (`symptoms`, `diagnosed_diseases`, `health_conditions`) is stored.**
+Two event types are system-managed and reserved (a client can never create
+one directly via `POST /patients/:id/events`):
+
+- `patient_created` — written once, in the same transaction as `POST /patients`, carrying the patient's initial clinical state.
+- `patient_updated` — written whenever a `PATCH /patients/:id` changes any of `symptoms`, `diagnosed_diseases`, or `health_conditions`.
+
+A patient's **current clinical state** is simply the most recent
+`patient_created`/`patient_updated` event for that patient, ordered by
+`occurred_at`. There's no diff and no snapshot stack — each event's
+`event_data` is just the flat clinical state at that moment:
 
 ```json
 {
@@ -93,38 +100,21 @@ instead of a computed diff.
   "patient_id": "8f14e45f-ceea-4f3e-b6a1-0d2a3c4e5f6a",
   "event_type": "patient_updated",
   "event_data": {
-    "current": {
-      "name": "Rekha Sharma",
-      "age": 34,
-      "sex": "F",
-      "symptoms": ["fever", "cough"],
-      "diagnosed_diseases": ["ICD10_J45"],
-      "health_conditions": { "bp": "128/82" }
-    },
-    "previous_snapshots": [
-      {
-        "name": "Rekha Sharma",
-        "age": 34,
-        "sex": "F",
-        "symptoms": ["fever"],
-        "diagnosed_diseases": ["ICD10_J45"],
-        "health_conditions": { "bp": "130/85" }
-      }
-    ]
+    "symptoms": ["fever", "cough"],
+    "diagnosed_diseases": ["ICD10_J45"],
+    "health_conditions": { "bp": "128/82", "sugar": "108mg/dL", "allergies": ["penicillin"] }
   },
   "occurred_at": "2026-08-22T10:20:00Z",
   "created_at": "2026-08-22T10:20:00Z"
 }
 ```
 
-`current` is the full patient state right after that update. Each further
-update prepends one more entry onto `previous_snapshots`, so the array grows
-across the patient's whole edit history — the full timeline is recoverable
-without walking every event and re-applying diffs. Neither snapshot includes
-`patient_id` or `hospital_id`; only the editable clinical fields.
+Any other `event_type` (e.g. `treatment`) is a free-form clinical note —
+`eventData` can be any shape and is never read as a snapshot of current
+state; only `patient_created`/`patient_updated` events are.
 
 Events are stored locally and linked to `patients.patient_id`. Deleting a
-patient deletes its events.
+patient deletes its events (and therefore its whole clinical history).
 
 ## 4. Logs Schema (Global I/O + Rounds)
 
@@ -197,6 +187,18 @@ WHERE hospital_id = :hospital_user_id
     SELECT MAX(timestamp) FROM logs
     WHERE node_id = 'HOSP_A' AND direction = 'outgoing' AND status = 'confirmed'
   );
+```
+
+**Current clinical state for every patient at one hospital** (what
+`GET /patients` computes — latest `patient_created`/`patient_updated` event
+per patient, via `DISTINCT ON`):
+
+```sql
+SELECT DISTINCT ON (patient_id) patient_id, event_data, occurred_at
+FROM patient_events
+WHERE patient_id IN (SELECT patient_id FROM patients WHERE hospital_id = :hospital_user_id)
+  AND event_type IN ('patient_created', 'patient_updated')
+ORDER BY patient_id, occurred_at DESC;
 ```
 
 **Whether the current round has been sent:**

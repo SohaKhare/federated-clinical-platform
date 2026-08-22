@@ -13,7 +13,10 @@ import type {
   Patient,
   UpdatePatientInput,
 } from "../../interfaces/model/patient.interface.js";
-import type { CreatePatientEventInput } from "../../interfaces/model/patient-event.interface.js";
+import {
+  CLINICAL_SNAPSHOT_EVENT_TYPES,
+  type CreatePatientEventInput,
+} from "../../interfaces/model/patient-event.interface.js";
 
 /**
  * requireAuth + requireRole("local") run before every handler in this file,
@@ -156,6 +159,12 @@ export async function addPatientEvent(req: Request, res: Response) {
   if (!isCreatePatientEventInput(req.body)) {
     return res.status(400).json({
       message: "eventType and eventData are required.",
+    });
+  }
+
+  if ((CLINICAL_SNAPSHOT_EVENT_TYPES as readonly string[]).includes(req.body.eventType)) {
+    return res.status(400).json({
+      message: `eventType '${req.body.eventType}' is reserved and cannot be created directly.`,
     });
   }
 

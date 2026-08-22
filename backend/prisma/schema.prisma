@@ -31,9 +31,6 @@ model Patient {
   name               String
   age                Int
   sex                String
-  symptoms           String[] @default([])
-  diagnosedDiseases  String[] @default([]) @map("diagnosed_diseases")
-  healthConditions   Json     @default("{}") @map("health_conditions")
   contributedToRound Int?     @map("contributed_to_round")
   updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
   createdAt          DateTime @default(now()) @map("created_at")
