@@ -1,0 +1,78 @@
+{
+  "model_type": "CovidMortalityMLP",
+  "architecture": {
+    "input_dim": 35,
+    "hidden_dim1": 16,
+    "hidden_dim2": 8,
+    "output_dim": 1
+  },
+  "hyperparameters": {
+    "epochs": 100,
+    "batch_size": 16,
+    "learning_rate": 0.01,
+    "weight_decay": 0.001,
+    "random_state": 42,
+    "pos_weight": 9.52808988764045
+  },
+  "dataset_summary": {
+    "total_raw_rows": 1184,
+    "total_unique_patients": 1172,
+    "selected_features": [
+      "a105",
+      "a103",
+      "a106",
+      "a108",
+      "a130",
+      "a131",
+      "a137",
+      "a138",
+      "a139",
+      "a141",
+      "a145",
+      "a150",
+      "a152",
+      "a153",
+      "a154",
+      "a155",
+      "a156",
+      "a200"
+    ],
+    "raw_feature_count": 18,
+    "encoded_features": 35,
+    "train_samples": 937,
+    "test_samples": 235,
+    "train_deaths": 89,
+    "train_non_deaths": 848,
+    "test_deaths": 22,
+    "test_non_deaths": 213,
+    "train_mortality_rate_percent": 9.498399146211312,
+    "test_mortality_rate_percent": 9.361702127659575
+  },
+  "metrics": {
+    "accuracy": 0.676595744680851,
+    "precision": 0.13513513513513514,
+    "recall": 0.45454545454545453,
+    "f1_score": 0.20833333333333334,
+    "roc_auc": 0.6618651301749894,
+    "pr_auc": 0.20616210039467578,
+    "sensitivity": 0.45454545454545453,
+    "specificity": 0.6995305164319249,
+    "confusion_matrix": [
+      [
+        149,
+        64
+      ],
+      [
+        12,
+        10
+      ]
+    ],
+    "true_negatives": 149,
+    "false_positives": 64,
+    "false_negatives": 12,
+    "true_positives": 10,
+    "mortality_precision": 0.13513513513513514,
+    "mortality_recall": 0.45454545454545453,
+    "mortality_f1": 0.20833333333333334
+  }
+}

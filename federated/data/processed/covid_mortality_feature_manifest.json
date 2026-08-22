@@ -1,0 +1,313 @@
+{
+  "model_name": "COVID-19 Admission-Time Mortality Prediction Model",
+  "version": "1.0.0",
+  "dataset": "National_Clinical_Registry_Covid19_Sample_data.csv",
+  "target": {
+    "column": "d347",
+    "positive_value": "Death",
+    "binary_mapping": "1 if d347 == 'Death' else 0"
+  },
+  "patient_identifier": "a101",
+  "hospital_identifier": "a102",
+  "selected_18_features": [
+    {
+      "variable_id": "a103",
+      "clinical_meaning": "Referred case vs Direct Admission",
+      "type": "Nominal",
+      "non_null_count": 1172,
+      "missing_percent": 0.0,
+      "allowed_categories": [
+        "Direct Admission",
+        "Referred case"
+      ],
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Recorded at time of entry; no post-admission course information"
+    },
+    {
+      "variable_id": "a105",
+      "clinical_meaning": "Age in completed years",
+      "type": "Numeric (Continuous)",
+      "non_null_count": 1172,
+      "missing_percent": 0.0,
+      "allowed_categories": "0-98",
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Static demographic variable recorded at presentation"
+    },
+    {
+      "variable_id": "a106",
+      "clinical_meaning": "Gender of the respondent",
+      "type": "Nominal",
+      "non_null_count": 1172,
+      "missing_percent": 0.0,
+      "allowed_categories": [
+        "Male",
+        "Female"
+      ],
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Static demographic variable recorded at presentation"
+    },
+    {
+      "variable_id": "a108",
+      "clinical_meaning": "Migrant worker status",
+      "type": "Nominal",
+      "non_null_count": 1158,
+      "missing_percent": 1.19,
+      "allowed_categories": [
+        "Yes",
+        "No"
+      ],
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Socio-demographic factor; imputed via mode on train split"
+    },
+    {
+      "variable_id": "a130",
+      "clinical_meaning": "Symptom present at admission",
+      "type": "Nominal",
+      "non_null_count": 1172,
+      "missing_percent": 0.0,
+      "allowed_categories": [
+        "1. Yes",
+        "0. No"
+      ],
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Initial triage symptom checklist"
+    },
+    {
+      "variable_id": "a131",
+      "clinical_meaning": "History of fever",
+      "type": "Nominal",
+      "non_null_count": 1172,
+      "missing_percent": 0.0,
+      "allowed_categories": [
+        "Yes",
+        "No"
+      ],
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Presenting symptom prior to hospital admission"
+    },
+    {
+      "variable_id": "a137",
+      "clinical_meaning": "Sore throat",
+      "type": "Nominal",
+      "non_null_count": 1172,
+      "missing_percent": 0.0,
+      "allowed_categories": [
+        "Yes",
+        "No"
+      ],
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Initial presenting respiratory symptom"
+    },
+    {
+      "variable_id": "a138",
+      "clinical_meaning": "Runny nose",
+      "type": "Nominal",
+      "non_null_count": 1172,
+      "missing_percent": 0.0,
+      "allowed_categories": [
+        "Yes",
+        "No"
+      ],
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Initial presenting respiratory symptom"
+    },
+    {
+      "variable_id": "a139",
+      "clinical_meaning": "Loss of smell (Anosmia)",
+      "type": "Nominal",
+      "non_null_count": 1172,
+      "missing_percent": 0.0,
+      "allowed_categories": [
+        "Yes",
+        "No"
+      ],
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Initial sensory presenting symptom"
+    },
+    {
+      "variable_id": "a141",
+      "clinical_meaning": "Chest pain",
+      "type": "Nominal",
+      "non_null_count": 1172,
+      "missing_percent": 0.0,
+      "allowed_categories": [
+        "Yes",
+        "No"
+      ],
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Initial presenting cardiopulmonary symptom"
+    },
+    {
+      "variable_id": "a145",
+      "clinical_meaning": "Fatigue / Malaise",
+      "type": "Nominal",
+      "non_null_count": 1172,
+      "missing_percent": 0.0,
+      "allowed_categories": [
+        "Yes",
+        "No"
+      ],
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Constitutional presenting symptom"
+    },
+    {
+      "variable_id": "a150",
+      "clinical_meaning": "Headache",
+      "type": "Nominal",
+      "non_null_count": 1172,
+      "missing_percent": 0.0,
+      "allowed_categories": [
+        "Yes",
+        "No"
+      ],
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Initial neurological symptom"
+    },
+    {
+      "variable_id": "a152",
+      "clinical_meaning": "Seizures",
+      "type": "Nominal",
+      "non_null_count": 1172,
+      "missing_percent": 0.0,
+      "allowed_categories": [
+        "1. Yes",
+        "0"
+      ],
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Initial neurological presentation"
+    },
+    {
+      "variable_id": "a153",
+      "clinical_meaning": "Weakness of limbs / Inability to walk",
+      "type": "Nominal",
+      "non_null_count": 1172,
+      "missing_percent": 0.0,
+      "allowed_categories": [
+        "Yes",
+        "No"
+      ],
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Functional mobility assessment at admission"
+    },
+    {
+      "variable_id": "a154",
+      "clinical_meaning": "Abdominal pain",
+      "type": "Nominal",
+      "non_null_count": 1172,
+      "missing_percent": 0.0,
+      "allowed_categories": [
+        "Yes",
+        "No"
+      ],
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Initial gastrointestinal symptom"
+    },
+    {
+      "variable_id": "a155",
+      "clinical_meaning": "Vomiting / Nausea",
+      "type": "Nominal",
+      "non_null_count": 1172,
+      "missing_percent": 0.0,
+      "allowed_categories": [
+        "Yes",
+        "No"
+      ],
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Initial gastrointestinal symptom"
+    },
+    {
+      "variable_id": "a156",
+      "clinical_meaning": "Diarrhea",
+      "type": "Nominal",
+      "non_null_count": 1172,
+      "missing_percent": 0.0,
+      "allowed_categories": [
+        "Yes",
+        "No"
+      ],
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Initial gastrointestinal symptom"
+    },
+    {
+      "variable_id": "a200",
+      "clinical_meaning": "Pre-existing Comorbidities present",
+      "type": "Nominal",
+      "non_null_count": 1172,
+      "missing_percent": 0.0,
+      "allowed_categories": [
+        "Present",
+        "Absent"
+      ],
+      "prediction_timestamp": "Admission / Triage",
+      "leakage_rationale": "Baseline patient history prior to infection"
+    }
+  ],
+  "excluded_features_summary": {
+    "total_excluded": 236,
+    "sample_excluded": [
+      "d337",
+      "d339",
+      "d340",
+      "d341",
+      "d342",
+      "d344",
+      "d345",
+      "d346",
+      "d347",
+      "d348",
+      "d351",
+      "d354",
+      "f104",
+      "g102",
+      "g178"
+    ],
+    "exclusion_reason": "Post-admission outcomes, duration of stay, ICU days, in-hospital medications, mechanical ventilation, and post-discharge follow-ups"
+  },
+  "preprocessing_rules": {
+    "deduplication": "Drop duplicates on a101, keep='first'",
+    "numerical_strategy": "SimpleImputer(strategy='median') + StandardScaler()",
+    "categorical_strategy": "SimpleImputer(strategy='most_frequent') + OneHotEncoder(handle_unknown='ignore')",
+    "leakage_prevention": "All transformations fit strictly on training partition (X_train)"
+  },
+  "data_splits": {
+    "random_seed": 42,
+    "total_unique_patients": 1172,
+    "train_patients": 937,
+    "test_patients": 235,
+    "train_deaths": 89,
+    "train_non_deaths": 848,
+    "test_deaths": 22,
+    "test_non_deaths": 213,
+    "hospital_client_count": 41
+  },
+  "model_architecture": {
+    "type": "CovidMortalityMLP",
+    "input_dimension": 35,
+    "hidden_layer_1": 16,
+    "hidden_layer_2": 8,
+    "output_dimension": 1,
+    "activation": "ReLU",
+    "loss_function": "BCEWithLogitsLoss",
+    "positive_class_weight": 9.52808988764045
+  },
+  "training_hyperparameters": {
+    "optimizer": "AdamW",
+    "learning_rate": 0.01,
+    "weight_decay": 0.001,
+    "centralized_epochs": 100,
+    "centralized_batch_size": 16,
+    "local_dp_epochs": 10,
+    "local_dp_batch_size": 8,
+    "federated_rounds": 5
+  },
+  "differential_privacy": {
+    "framework": "Opacus 1.6.0",
+    "noise_multiplier": 0.5,
+    "max_grad_norm": 1.0,
+    "target_delta": 1e-05,
+    "accountant": "PRV / RDP",
+    "min_client_epsilon": 32.46561170393628,
+    "max_client_epsilon": 47.02193737821494,
+    "mean_client_epsilon": 43.034220474943325
+  }
+}
