@@ -88,21 +88,25 @@ Purpose: Return the current session user.
 
 Input: Valid session cookie required.
 
-Expected response `200` after login:
+Expected response `200` after login (real captured output):
 
 ```json
 {
   "authenticated": true,
   "user": {
-    "userId": "uuid",
-    "googleId": "google-account-id",
-    "email": "hospital@example.com",
-    "picture": "https://...",
+    "userId": "02b6b04a-de58-4191-92fe-140fa2df84ed",
+    "googleId": "fulltest-local-1787433028407",
+    "email": "crab.ai2026+fulltest-local-1787433028407@gmail.com",
+    "hospitalName": "AIIMS Delhi",
+    "node": "local",
     "role": "local",
-    "onboarded": false
+    "onboarded": true
   }
 }
 ```
+
+`picture` only appears if the Google account provided one; `hospitalName`
+only appears once onboarding is complete. `node` always mirrors `role`.
 
 Expected unauthenticated response `401`:
 
@@ -133,27 +137,29 @@ Input:
 }
 ```
 
-Expected response `200`:
+Expected response `200` (real captured output):
 
 ```json
 {
   "user": {
-    "userId": "uuid",
-    "googleId": "google-account-id",
-    "email": "hospital@example.com",
+    "userId": "02b6b04a-de58-4191-92fe-140fa2df84ed",
+    "googleId": "fulltest-local-1787433028407",
+    "email": "crab.ai2026+fulltest-local-1787433028407@gmail.com",
     "hospitalName": "AIIMS Delhi",
-    "pincode": "110029",
-    "geolocation": {
-      "latitude": 28.5672,
-      "longitude": 77.21
-    },
+    "node": "local",
     "role": "local",
     "onboarded": true
   }
 }
 ```
 
-Invalid input response `400`:
+Note: `pincode` and `geolocation` are saved to the database but **not**
+included in the session/`user` object returned here or from `GET /auth/me`
+— `UserSession` (`user.interface.ts`) only ever exposes `hospitalName`. If
+the frontend needs pincode/geolocation back, that's a gap to close later,
+not something currently returned.
+
+Invalid input response `400` (real captured output):
 
 ```json
 {
@@ -192,12 +198,12 @@ Input:
 }
 ```
 
-Expected response `201`:
+Expected response `201` (real captured output):
 
 ```json
 {
   "patient": {
-    "patient_id": "uuid",
+    "patient_id": "e99e6134-b043-4058-9f7e-201f002da401",
     "name": "Rekha Sharma",
     "age": 34,
     "sex": "F",
@@ -209,13 +215,13 @@ Expected response `201`:
       "allergies": ["penicillin"]
     },
     "contributed_to_round": null,
-    "updated_at": "2026-08-22T10:15:00.000Z",
-    "created_at": "2026-08-22T10:15:00.000Z"
+    "updated_at": "2026-08-22T21:11:15.558Z",
+    "created_at": "2026-08-22T21:11:15.558Z"
   }
 }
 ```
 
-Invalid input response `400`:
+Invalid input response `400` (real captured output):
 
 ```json
 {
@@ -229,28 +235,32 @@ Purpose: List patients stored in the local database, newest updates first.
 
 Input: Valid local session cookie required.
 
-Expected response `200`:
+Expected response `200` (real captured output, before the PATCH below):
 
 ```json
 {
   "patients": [
     {
-      "patient_id": "uuid",
+      "patient_id": "e99e6134-b043-4058-9f7e-201f002da401",
       "name": "Rekha Sharma",
       "age": 34,
       "sex": "F",
-      "symptoms": ["fever", "cough"],
+      "symptoms": ["fever", "cough", "fatigue"],
       "diagnosed_diseases": ["ICD10_J45"],
-      "health_conditions": {},
+      "health_conditions": {
+        "bp": "130/85",
+        "sugar": "110mg/dL",
+        "allergies": ["penicillin"]
+      },
       "contributed_to_round": null,
-      "updated_at": "2026-08-22T10:15:00.000Z",
-      "created_at": "2026-08-22T10:15:00.000Z"
+      "updated_at": "2026-08-22T21:11:15.558Z",
+      "created_at": "2026-08-22T21:11:15.558Z"
     }
   ]
 }
 ```
 
-Expected unauthenticated response `401`:
+Expected unauthenticated response `401` (real captured output):
 
 ```json
 {
@@ -258,12 +268,51 @@ Expected unauthenticated response `401`:
 }
 ```
 
-Expected non-local-role response `403`:
+Expected non-local-role response `403` (real captured output, global user
+hitting a local-only route):
 
 ```json
 {
   "message": "Access denied. Requires role: local.",
   "yourRole": "global"
+}
+```
+
+### GET `/patients/:id`
+
+Purpose: Return one patient's full profile (same merged shape as the list
+endpoint).
+
+Expected response `200` (real captured output):
+
+```json
+{
+  "patient": {
+    "patient_id": "e99e6134-b043-4058-9f7e-201f002da401",
+    "name": "Rekha Sharma",
+    "age": 34,
+    "sex": "F",
+    "symptoms": ["fever", "cough", "fatigue"],
+    "diagnosed_diseases": ["ICD10_J45"],
+    "health_conditions": {
+      "bp": "130/85",
+      "sugar": "110mg/dL",
+      "allergies": ["penicillin"]
+    },
+    "contributed_to_round": null,
+    "updated_at": "2026-08-22T21:11:15.558Z",
+    "created_at": "2026-08-22T21:11:15.558Z"
+  }
+}
+```
+
+Expected response `404` for a nonexistent patient ID, or one belonging to
+a different hospital (real captured output — never a `403`, so a caller
+can't tell the difference between "doesn't exist" and "not yours"):
+
+```json
+{
+  "message": "Patient not found."
 }
 ```
 
@@ -288,12 +337,12 @@ Input:
 }
 ```
 
-Expected response `200`:
+Expected response `200` (real captured output):
 
 ```json
 {
   "patient": {
-    "patient_id": "uuid",
+    "patient_id": "e99e6134-b043-4058-9f7e-201f002da401",
     "name": "Rekha Sharma",
     "age": 34,
     "sex": "F",
@@ -305,25 +354,26 @@ Expected response `200`:
       "allergies": ["penicillin"]
     },
     "contributed_to_round": null,
-    "updated_at": "2026-08-22T10:40:00.000Z",
-    "created_at": "2026-08-22T10:15:00.000Z"
+    "updated_at": "2026-08-22T21:11:16.515Z",
+    "created_at": "2026-08-22T21:11:15.558Z"
   }
 }
 ```
 
-The corresponding event is available through `GET /patients/:id/events`:
+The corresponding event is available through `GET /patients/:id/events`
+(real captured `event_data` for the `patient_updated` entry):
 
 ```json
 {
   "event_type": "patient_updated",
   "event_data": {
     "symptoms": ["fever", "cough", "fatigue", "shortness of breath"],
-    "diagnosed_diseases": ["ICD10_J45"],
     "health_conditions": {
       "bp": "128/82",
       "sugar": "108mg/dL",
       "allergies": ["penicillin"]
-    }
+    },
+    "diagnosed_diseases": ["ICD10_J45"]
   }
 }
 ```
@@ -342,25 +392,57 @@ Purpose: Return the patient's chronological clinical events.
 
 Input: Valid local session cookie and a patient UUID in the URL.
 
-Expected response `200`:
+Expected response `200` (real captured output — full chronological history
+after the create + treatment event + PATCH above, oldest first):
 
 ```json
 {
   "events": [
     {
-      "event_id": "uuid",
-      "patient_id": "uuid",
+      "event_id": "9f3a00eb-776d-454a-b78c-14e8cb5e5243",
+      "patient_id": "e99e6134-b043-4058-9f7e-201f002da401",
+      "event_type": "patient_created",
+      "event_data": {
+        "symptoms": ["fever", "cough", "fatigue"],
+        "health_conditions": { "bp": "130/85", "sugar": "110mg/dL", "allergies": ["penicillin"] },
+        "diagnosed_diseases": ["ICD10_J45"]
+      },
+      "occurred_at": "2026-08-22T21:11:15.648Z",
+      "created_at": "2026-08-22T21:11:15.648Z"
+    },
+    {
+      "event_id": "8c313937-0742-472c-90d9-14a2f5c1885b",
+      "patient_id": "e99e6134-b043-4058-9f7e-201f002da401",
       "event_type": "treatment",
       "event_data": {
-        "treatment": "Treatment A",
-        "outcome": "improving"
+        "outcome": "improving",
+        "treatment": "Treatment A"
       },
       "occurred_at": "2026-08-22T10:30:00.000Z",
-      "created_at": "2026-08-22T10:30:00.000Z"
+      "created_at": "2026-08-22T21:11:16.869Z"
+    },
+    {
+      "event_id": "50183fd1-b206-4d8d-bb6e-83495c8e93f0",
+      "patient_id": "e99e6134-b043-4058-9f7e-201f002da401",
+      "event_type": "patient_updated",
+      "event_data": {
+        "symptoms": ["fever", "cough", "fatigue", "shortness of breath"],
+        "health_conditions": { "bp": "128/82", "sugar": "108mg/dL", "allergies": ["penicillin"] },
+        "diagnosed_diseases": ["ICD10_J45"]
+      },
+      "occurred_at": "2026-08-22T21:11:16.580Z",
+      "created_at": "2026-08-22T21:11:16.580Z"
     }
   ]
 }
 ```
+
+Note the ordering is by `occurred_at`, not `created_at`: the `treatment`
+event was created last (`created_at` 21:11:16.869) but its caller-supplied
+`occurredAt` (10:30:00.000Z, earlier that same day) puts it second in the
+list, ahead of the `patient_updated` event that was actually created before
+it. `patient_created` and `patient_updated` always use the real server time
+for `occurred_at` since they're system-generated.
 
 ### POST `/patients/:id/events`
 
@@ -379,29 +461,38 @@ Input:
 }
 ```
 
-Expected response `201`:
+Expected response `201` (real captured output):
 
 ```json
 {
   "event": {
-    "event_id": "uuid",
-    "patient_id": "uuid",
+    "event_id": "8c313937-0742-472c-90d9-14a2f5c1885b",
+    "patient_id": "e99e6134-b043-4058-9f7e-201f002da401",
     "event_type": "treatment",
     "event_data": {
-      "treatment": "Treatment A",
-      "outcome": "improving"
+      "outcome": "improving",
+      "treatment": "Treatment A"
     },
     "occurred_at": "2026-08-22T10:30:00.000Z",
-    "created_at": "2026-08-22T10:30:00.000Z"
+    "created_at": "2026-08-22T21:11:16.869Z"
   }
 }
 ```
 
-Invalid input response `400`:
+Invalid input response `400` (real captured output):
 
 ```json
 {
   "message": "eventType and eventData are required."
+}
+```
+
+Reserved-event-type response `400` (real captured output, attempting
+`eventType: "patient_updated"`):
+
+```json
+{
+  "message": "eventType 'patient_updated' is reserved and cannot be created directly."
 }
 ```
 
@@ -425,32 +516,55 @@ Query params (all optional):
 
 Expected response `200` (ordered newest round first). `pagination.total`/
 `totalPages` reflect the filtered count (i.e. after `direction`/`status`/
-`round` are applied, not the hospital's total log count):
+`round` are applied, not the hospital's total log count). Real captured
+output for a hospital with 3 seeded log rows:
 
 ```json
 {
   "logs": [
     {
-      "log_id": "uuid",
-      "node_id": "uuid",
-      "timestamp": "2026-08-22T10:20:00.000Z",
-      "direction": "outgoing",
-      "round": 14,
-      "metadata": { "num_examples": 4213 },
+      "log_id": "4fc58403-7a07-4981-b112-aee10bcfe5cd",
+      "node_id": "02b6b04a-de58-4191-92fe-140fa2df84ed",
+      "timestamp": "2026-08-22T21:11:46.404Z",
+      "direction": "incoming",
+      "round": 3,
+      "metadata": {},
       "status": "confirmed",
-      "created_at": "2026-08-22T10:20:00.000Z"
+      "created_at": "2026-08-22T21:11:46.404Z"
+    },
+    {
+      "log_id": "407d9ed3-c289-4406-af46-bb99ee9621c8",
+      "node_id": "02b6b04a-de58-4191-92fe-140fa2df84ed",
+      "timestamp": "2026-08-22T21:11:46.318Z",
+      "direction": "outgoing",
+      "round": 3,
+      "metadata": {
+        "num_examples": 500,
+        "metrics": { "epsilon": 3.2, "delta": 0.00001, "clipping_norm": 1, "noise_multiplier": 1.1 }
+      },
+      "status": "confirmed",
+      "created_at": "2026-08-22T21:11:46.318Z"
+    },
+    {
+      "log_id": "62ff1a84-4a65-4418-9d2b-e5abbade3970",
+      "node_id": "02b6b04a-de58-4191-92fe-140fa2df84ed",
+      "timestamp": "2026-08-22T21:11:46.433Z",
+      "direction": "outgoing",
+      "round": 2,
+      "metadata": { "num_examples": 480 },
+      "status": "failed",
+      "created_at": "2026-08-22T21:11:46.433Z"
     }
   ],
-  "pagination": {
-    "page": 1,
-    "pageSize": 20,
-    "total": 47,
-    "totalPages": 3
-  }
+  "pagination": { "page": 1, "pageSize": 20, "total": 3, "totalPages": 1 }
 }
 ```
 
-Invalid query response `400`:
+With `?direction=outgoing&status=confirmed` applied, only the round-3
+outgoing row is returned, and `pagination.total` drops to `1` — confirming
+the count reflects the filtered set, not the hospital's full log count.
+
+Invalid query response `400` (real captured output, `?pageSize=99999`):
 
 ```json
 {
@@ -458,9 +572,10 @@ Invalid query response `400`:
 }
 ```
 
-Note: nothing currently writes to the `logs` table (the Python federated
-package is still a scaffold), so this will return `{"logs": []}` until a
-federated round actually runs and logs something.
+Note: nothing currently writes to the `logs` table in normal operation (the
+Python federated package doesn't integrate with the backend yet), so this
+will return `{"logs": [], "pagination": {"page":1,"pageSize":20,"total":0,"totalPages":0}}`
+until a federated round actually runs and logs something.
 
 ### GET `/federated/status`
 
@@ -468,26 +583,32 @@ Purpose: Return the caller's own hospital's federation status — reuses the
 same lookup the global node uses to check on any node
 (`node.service.ts::getNodeStatus`), just always scoped to the caller.
 
-Expected response `200`:
+Expected response `200` (real captured output, same 3 seeded logs as above):
 
 ```json
 {
-  "node_id": "uuid",
+  "node_id": "02b6b04a-de58-4191-92fe-140fa2df84ed",
   "hospital_name": "AIIMS Delhi",
   "status": "active",
   "federation_state": {
     "latest_round_seen": 3,
-    "last_direction": "incoming",
-    "last_status": "confirmed"
+    "last_direction": "outgoing",
+    "last_status": "failed"
   },
-  "last_activity_at": "2026-08-22T20:47:51.089Z"
+  "last_activity_at": "2026-08-22T21:11:46.433Z"
 }
 ```
 
 `status` is `"registered"` if the hospital has never appeared in `logs`,
 `"active"` if its last activity was within 24 hours, otherwise `"idle"`.
+Note `federation_state` reflects the single most-recent log **by
+timestamp**, not the highest round number — here the round-2 `outgoing`
+row happened to be inserted after the round-3 rows, so it's what
+`last_direction`/`last_status` report, even though `latest_round_seen`
+correctly reports the max round (`3`) across all logs.
 
-Response `404` if the caller hasn't completed onboarding yet:
+Response `404` if the caller hasn't completed onboarding yet (real captured
+output):
 
 ```json
 {
@@ -503,20 +624,22 @@ real federated round reports these numbers, every field stays `null` and
 `dp_enabled` stays `false` (per `API.md`'s rule against describing an update
 as private unless the mechanism is actually enabled and measured).
 
-Expected response `200` (once a round has reported DP metrics):
+Expected response `200` (real captured output, once a round has reported
+DP metrics):
 
 ```json
 {
   "dp_enabled": true,
   "epsilon": 3.2,
   "delta": 0.00001,
-  "clipping_norm": 1.0,
+  "clipping_norm": 1,
   "noise_multiplier": 1.1,
   "as_of_round": 3
 }
 ```
 
-Before any round has run:
+Before any round has run (real captured output, a different hospital with
+no logs at all):
 
 ```json
 {
@@ -539,24 +662,27 @@ Any diagnosis or symptom seen in fewer than `min_group_size` patients (3) is
 left out entirely, per `API.md`'s rule against exposing small groups that
 could re-identify a patient.
 
-Expected response `200`:
+Expected response `200` (real captured output, 3 patients — Rekha Sharma,
+Amit Verma, and Sita Devi — all sharing `ICD10_J45` with `fever`+`cough`):
 
 ```json
 {
-  "total_patients": 5,
-  "age": { "average": 37.2, "min": 30, "max": 60 },
-  "sex_breakdown": { "M": 3, "F": 2 },
-  "top_diagnosed_diseases": [{ "diagnosis": "ICD10_J45", "count": 4 }],
+  "total_patients": 3,
+  "age": { "average": 31.3, "min": 8, "max": 52 },
+  "sex_breakdown": { "F": 2, "M": 1 },
+  "top_diagnosed_diseases": [{ "diagnosis": "ICD10_J45", "count": 3 }],
   "top_symptoms": [
-    { "symptom": "fever", "count": 4 },
-    { "symptom": "cough", "count": 4 }
+    { "symptom": "fever", "count": 3 },
+    { "symptom": "cough", "count": 3 }
   ],
   "min_group_size": 3
 }
 ```
 
-If, say, a 6th patient had a unique diagnosis, it would not appear in
-`top_diagnosed_diseases` at all (only 1 patient, below the threshold of 3).
+Confirmed live: when a 4th patient was seeded with a unique diagnosis seen
+by only 1 patient, it correctly did **not** appear in
+`top_diagnosed_diseases` (below the threshold of 3) — verified in an
+earlier test run, not shown in this exact capture.
 
 ### GET `/research/insights`
 
@@ -567,17 +693,17 @@ Labelled as observed patterns, never a causal claim, per `API.md`.
 Same `min_group_size` suppression applies: a diagnosis is only included if
 at least 3 patients share it.
 
-Expected response `200`:
+Expected response `200` (real captured output, same 3 patients as above):
 
 ```json
 {
   "associations": [
     {
       "diagnosis": "ICD10_J45",
-      "patient_count": 4,
+      "patient_count": 3,
       "common_symptoms": [
-        { "symptom": "fever", "count": 4 },
-        { "symptom": "cough", "count": 4 }
+        { "symptom": "fever", "count": 3 },
+        { "symptom": "cough", "count": 3 }
       ]
     }
   ],
@@ -592,13 +718,22 @@ Expected response `200`:
 
 Auth: Authenticated local user only.
 
-Expected response `200`:
+Expected response `200` (real captured output):
 
 ```json
 {
   "role": "local",
-  "user": "hospital@example.com",
+  "user": "crab.ai2026+fulltest-local-1787433028407@gmail.com",
   "message": "Local institution dashboard data."
+}
+```
+
+Real captured `403` when a `global` user calls it:
+
+```json
+{
+  "message": "Access denied. Requires role: local.",
+  "yourRole": "global"
 }
 ```
 
@@ -606,17 +741,134 @@ Expected response `200`:
 
 Auth: Authenticated global user only.
 
-Expected response `200`:
+Expected response `200` (real captured output):
 
 ```json
 {
   "role": "global",
-  "user": "researcher@example.com",
+  "user": "test@example.com",
   "message": "Federated server dashboard data."
 }
 ```
 
+Real captured `403` when a `local` user calls it: same shape as above, with
+`"yourRole": "local"` and a message requiring role `global`.
+
+### Global node endpoints
+
+Auth: Authenticated global user only. These give the global/federation side
+a read-only view of registered hospitals, derived from `users` (role
+`local`, onboarded) and their `logs` rows — no patient data is ever
+exposed here.
+
+### GET `/nodes`
+
+Purpose: List every onboarded local hospital with its current federation
+status.
+
+Expected response `200` (real captured output, one onboarded hospital with
+the 3 seeded logs from above):
+
+```json
+{
+  "nodes": [
+    {
+      "node_id": "02b6b04a-de58-4191-92fe-140fa2df84ed",
+      "hospital_name": "AIIMS Delhi",
+      "pincode": "110029",
+      "geolocation": { "latitude": 28.5672, "longitude": 77.21 },
+      "contact_email": "crab.ai2026+fulltest-local-1787433028407@gmail.com",
+      "joined_at": "2026-08-22T21:10:28.986Z",
+      "last_activity_at": "2026-08-22T21:11:46.433Z",
+      "status": "active"
+    }
+  ]
+}
+```
+
+### GET `/nodes/:id`
+
+Purpose: Return one hospital's registration details plus its full
+round-by-round participation history, grouped from `logs`.
+
+Expected response `200` (real captured output):
+
+```json
+{
+  "node": {
+    "node_id": "02b6b04a-de58-4191-92fe-140fa2df84ed",
+    "hospital_name": "AIIMS Delhi",
+    "pincode": "110029",
+    "geolocation": { "latitude": 28.5672, "longitude": 77.21 },
+    "contact_email": "crab.ai2026+fulltest-local-1787433028407@gmail.com",
+    "joined_at": "2026-08-22T21:10:28.986Z",
+    "updated_at": "2026-08-22T21:11:01.635Z",
+    "status": "active",
+    "participation_history": [
+      {
+        "round": 2,
+        "directions": ["outgoing"],
+        "statuses": ["failed"],
+        "exchanges": 1,
+        "last_activity_at": "2026-08-22T21:11:46.433Z"
+      },
+      {
+        "round": 3,
+        "directions": ["outgoing", "incoming"],
+        "statuses": ["confirmed"],
+        "exchanges": 2,
+        "last_activity_at": "2026-08-22T21:11:46.404Z"
+      }
+    ]
+  }
+}
+```
+
+`GET /nodes/:id` with a syntactically invalid ID returns `400`; a
+well-formed but nonexistent UUID returns `404` (both confirmed live).
+
+### GET `/nodes/:id/status`
+
+Expected response `200` (real captured output — same shape and data as
+`GET /federated/status` from the local side, since both reuse
+`getNodeStatus`):
+
+```json
+{
+  "node_id": "02b6b04a-de58-4191-92fe-140fa2df84ed",
+  "hospital_name": "AIIMS Delhi",
+  "status": "active",
+  "federation_state": {
+    "latest_round_seen": 3,
+    "last_direction": "outgoing",
+    "last_status": "failed"
+  },
+  "last_activity_at": "2026-08-22T21:11:46.433Z"
+}
+```
+
+### GET `/nodes/:id/metrics`
+
+Expected response `200` (real captured output):
+
+```json
+{
+  "node_id": "02b6b04a-de58-4191-92fe-140fa2df84ed",
+  "hospital_name": "AIIMS Delhi",
+  "total_exchanges": 3,
+  "rounds_participated": 2,
+  "exchanges_by_status": { "confirmed": 2, "failed": 1 },
+  "first_activity_at": "2026-08-22T21:11:46.318Z",
+  "last_activity_at": "2026-08-22T21:11:46.433Z"
+}
+```
+
+Real captured `403` when a `local` user calls any `/nodes*` route (same
+shape as the other role-guard `403`s above, `yourRole: "local"`).
+
 ### Basic test sequence
+
+**Local node:**
 
 1. Start the backend with `npm run dev`.
 2. Open `GET /auth/google` and complete Google login.
@@ -624,9 +876,19 @@ Expected response `200`:
 4. Call `POST /auth/onboarding` with hospital details.
 5. Call `POST /patients` with a valid patient body.
 6. Call `GET /patients` and confirm the created patient is returned.
-7. Call `GET /api/hospital/summary` and confirm local access.
-8. Call the same protected endpoints without the session cookie and confirm
-   they return `401`.
+7. Call `GET /patients/:id`, `PATCH /patients/:id`, `GET/POST /patients/:id/events` and confirm the clinical-event history behaves as documented above.
+8. Call `GET /logs`, `GET /federated/status`, `GET /privacy/parameters`, `GET /research/summary`, `GET /research/insights` and confirm real (not mock) data scoped to this hospital.
+9. Call `GET /api/hospital/summary` and confirm local access.
+10. Call the same protected endpoints without the session cookie and confirm they return `401`.
+
+**Global node** (requires a separate user row with `role = 'global'`,
+manually set in the database — see `SCHEMA.md`):
+
+1. Log in as the `global` user and call `GET /auth/me` to confirm `role` is `global`.
+2. Call `GET /api/federated/status` and confirm global access.
+3. Call `GET /nodes`, `GET /nodes/:id`, `GET /nodes/:id/status`, `GET /nodes/:id/metrics` for an onboarded local hospital and confirm real participation data derived from `logs`.
+4. Call every local-only route (`/patients`, `/logs`, `/research/*`, `/privacy/*`, `/federated/status`, `/api/hospital/summary`) as the global user and confirm each returns `403`.
+5. Call every global-only route (`/nodes*`, `/api/federated/status`) as a local user and confirm each returns `403`.
 
 ## To be built
 
@@ -637,8 +899,10 @@ These items are planned but are not currently available through the backend.
 These API areas are described in `API.md` but are not currently wired in the
 Express backend:
 
-- Model status, prediction, and metrics — blocked on the Python federated
-  package, which is still an empty scaffold (no trained model to call).
+- Model status, prediction, and metrics — the Python federated package now
+  has real Flower app code (`model.py`, `task.py`, `server_app.py`,
+  `client_app.py`), but nothing in it talks to this backend yet, so there's
+  no trained model/version for these endpoints to call.
 
 ### Federated and privacy APIs
 
