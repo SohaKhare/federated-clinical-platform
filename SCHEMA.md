@@ -4,8 +4,11 @@ Four collections/tables per hospital node: **users**, **patients**,
 **patient_events**, and **logs**. No separate "weights" or "checkpoint" table —
 model versions and round updates are represented through log metadata.
 
-For the hackathon, one user represents one hospital. Every authenticated user
-has the `local` role; the hospital identity is stored on that user's profile.
+For the hackathon, one user represents one hospital. Every user created
+through Google OAuth gets the `local` role and its own hospital identity on
+that user's profile. A user is promoted to `global` (federated server role)
+by manually updating their row's `role` column in the database — there is
+no self-service way to become `global`.
 
 ---
 
@@ -44,6 +47,7 @@ Source of truth for hospital-local patient data. Never leaves the hospital.
 ```json
 {
   "patient_id": "8f14e45f-ceea-4f3e-b6a1-0d2a3c4e5f6a",
+  "hospital_id": "4f14e45f-ceea-4f3e-b6a1-0d2a3c4e5f6a",
   "name": "Rekha Sharma",
   "age": 34,
   "sex": "F",
@@ -62,6 +66,12 @@ Source of truth for hospital-local patient data. Never leaves the hospital.
 
 **Notes:**
 
+- `patient_id` — always server-generated (`gen_random_uuid()`). The API never
+  accepts a client-supplied patient ID on create.
+- `hospital_id` — foreign key to `users.user_id`, the owning hospital. Set
+  once at creation from the authenticated session and never exposed in API
+  responses; every patient read/write is scoped to it so one hospital can
+  never see or modify another hospital's patients.
 - `contributed_to_round` — last training round this patient's data was included in. Not a "per-patient weight," just a marker.
 - `updated_at` — drives which patients are picked up for the _next_ training round (see query below).
 - On patient creation: only this record changes. No weight computation happens here.
@@ -72,9 +82,10 @@ Source of truth for hospital-local patient data. Never leaves the hospital.
 
 ## 3. Patient Events Schema
 
-Append-only clinical history for a patient. Patient updates also create an event
-with `event_type: "patient_updated"`; its `event_data` contains the previous
-snapshot, current snapshot, and field-level changes.
+Append-only clinical history for a patient. Patient updates also create an
+event with `event_type: "patient_updated"`; its `event_data` holds the full
+current snapshot plus a stack of every prior snapshot — most recent first —
+instead of a computed diff.
 
 ```json
 {
@@ -82,14 +93,6 @@ snapshot, current snapshot, and field-level changes.
   "patient_id": "8f14e45f-ceea-4f3e-b6a1-0d2a3c4e5f6a",
   "event_type": "patient_updated",
   "event_data": {
-    "previous": {
-      "name": "Rekha Sharma",
-      "age": 34,
-      "sex": "F",
-      "symptoms": ["fever"],
-      "diagnosed_diseases": ["ICD10_J45"],
-      "health_conditions": { "bp": "130/85" }
-    },
     "current": {
       "name": "Rekha Sharma",
       "age": 34,
@@ -98,17 +101,27 @@ snapshot, current snapshot, and field-level changes.
       "diagnosed_diseases": ["ICD10_J45"],
       "health_conditions": { "bp": "128/82" }
     },
-    "changes": {
-      "symptoms": {
-        "previous": ["fever"],
-        "current": ["fever", "cough"]
+    "previous_snapshots": [
+      {
+        "name": "Rekha Sharma",
+        "age": 34,
+        "sex": "F",
+        "symptoms": ["fever"],
+        "diagnosed_diseases": ["ICD10_J45"],
+        "health_conditions": { "bp": "130/85" }
       }
-    }
+    ]
   },
   "occurred_at": "2026-08-22T10:20:00Z",
   "created_at": "2026-08-22T10:20:00Z"
 }
 ```
+
+`current` is the full patient state right after that update. Each further
+update prepends one more entry onto `previous_snapshots`, so the array grows
+across the patient's whole edit history — the full timeline is recoverable
+without walking every event and re-applying diffs. Neither snapshot includes
+`patient_id` or `hospital_id`; only the editable clinical fields.
 
 Events are stored locally and linked to `patients.patient_id`. Deleting a
 patient deletes its events.
@@ -174,14 +187,16 @@ This table also acts as the "was it sent" and "last successful round" tracker �
 
 ## Derived queries (no extra tables required)
 
-**Patients to include in the next training round:**
+**Patients to include in the next training round** (scoped to one hospital
+via `hospital_id`, since `patients` now holds every hospital's records):
 
 ```sql
 SELECT * FROM patients
-WHERE updated_at > (
-  SELECT MAX(timestamp) FROM logs
-  WHERE node_id = 'HOSP_A' AND direction = 'outgoing' AND status = 'confirmed'
-);
+WHERE hospital_id = :hospital_user_id
+  AND updated_at > (
+    SELECT MAX(timestamp) FROM logs
+    WHERE node_id = 'HOSP_A' AND direction = 'outgoing' AND status = 'confirmed'
+  );
 ```
 
 **Whether the current round has been sent:**
