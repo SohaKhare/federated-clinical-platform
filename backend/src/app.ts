@@ -7,6 +7,9 @@ import { env } from "./config/env.js";
 import patientRoutes from "./routes/patient.routes.js";
 import nodeRoutes from "./routes/node.routes.js";
 import logRoutes from "./routes/log.routes.js";
+import researchRoutes from "./routes/research.routes.js";
+import privacyRoutes from "./routes/privacy.routes.js";
+import federatedRoutes from "./routes/federated.routes.js";
 
 const app = express();
 
@@ -60,6 +63,12 @@ app.use("/patients", patientRoutes);
 app.use("/nodes", nodeRoutes);
 
 app.use("/logs", logRoutes);
+
+app.use("/research", researchRoutes);
+
+app.use("/privacy", privacyRoutes);
+
+app.use("/federated", federatedRoutes);
 
 app.use("/api", demoRoutes);
 

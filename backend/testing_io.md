@@ -462,6 +462,130 @@ Note: nothing currently writes to the `logs` table (the Python federated
 package is still a scaffold), so this will return `{"logs": []}` until a
 federated round actually runs and logs something.
 
+### GET `/federated/status`
+
+Purpose: Return the caller's own hospital's federation status — reuses the
+same lookup the global node uses to check on any node
+(`node.service.ts::getNodeStatus`), just always scoped to the caller.
+
+Expected response `200`:
+
+```json
+{
+  "node_id": "uuid",
+  "hospital_name": "AIIMS Delhi",
+  "status": "active",
+  "federation_state": {
+    "latest_round_seen": 3,
+    "last_direction": "incoming",
+    "last_status": "confirmed"
+  },
+  "last_activity_at": "2026-08-22T20:47:51.089Z"
+}
+```
+
+`status` is `"registered"` if the hospital has never appeared in `logs`,
+`"active"` if its last activity was within 24 hours, otherwise `"idle"`.
+
+Response `404` if the caller hasn't completed onboarding yet:
+
+```json
+{
+  "message": "Hospital profile not found. Complete onboarding first."
+}
+```
+
+### GET `/privacy/parameters`
+
+Purpose: Return this hospital's DP metadata. This is read from the latest
+confirmed `outgoing` log's `metadata.metrics`, never fabricated — until a
+real federated round reports these numbers, every field stays `null` and
+`dp_enabled` stays `false` (per `API.md`'s rule against describing an update
+as private unless the mechanism is actually enabled and measured).
+
+Expected response `200` (once a round has reported DP metrics):
+
+```json
+{
+  "dp_enabled": true,
+  "epsilon": 3.2,
+  "delta": 0.00001,
+  "clipping_norm": 1.0,
+  "noise_multiplier": 1.1,
+  "as_of_round": 3
+}
+```
+
+Before any round has run:
+
+```json
+{
+  "dp_enabled": false,
+  "epsilon": null,
+  "delta": null,
+  "clipping_norm": null,
+  "noise_multiplier": null,
+  "as_of_round": null
+}
+```
+
+### GET `/research/summary`
+
+Purpose: Return coarse aggregate stats over this hospital's own patients —
+age distribution, sex breakdown, and top diagnoses/symptoms. Pure SQL
+aggregation over real patient data, no ML involved.
+
+Any diagnosis or symptom seen in fewer than `min_group_size` patients (3) is
+left out entirely, per `API.md`'s rule against exposing small groups that
+could re-identify a patient.
+
+Expected response `200`:
+
+```json
+{
+  "total_patients": 5,
+  "age": { "average": 37.2, "min": 30, "max": 60 },
+  "sex_breakdown": { "M": 3, "F": 2 },
+  "top_diagnosed_diseases": [{ "diagnosis": "ICD10_J45", "count": 4 }],
+  "top_symptoms": [
+    { "symptom": "fever", "count": 4 },
+    { "symptom": "cough", "count": 4 }
+  ],
+  "min_group_size": 3
+}
+```
+
+If, say, a 6th patient had a unique diagnosis, it would not appear in
+`top_diagnosed_diseases` at all (only 1 patient, below the threshold of 3).
+
+### GET `/research/insights`
+
+Purpose: Return observed symptom/diagnosis associations within this
+hospital's own patients — still plain co-occurrence counting, not ML.
+Labelled as observed patterns, never a causal claim, per `API.md`.
+
+Same `min_group_size` suppression applies: a diagnosis is only included if
+at least 3 patients share it.
+
+Expected response `200`:
+
+```json
+{
+  "associations": [
+    {
+      "diagnosis": "ICD10_J45",
+      "patient_count": 4,
+      "common_symptoms": [
+        { "symptom": "fever", "count": 4 },
+        { "symptom": "cough", "count": 4 }
+      ]
+    }
+  ],
+  "min_group_size": 3,
+  "note": "Observed associations only, derived from co-occurrence counts within this hospital's own patients. Not a causal claim."
+}
+```
+
 ### Current demo endpoints
 
 ### GET `/api/hospital/summary`
@@ -518,11 +642,15 @@ Express backend:
 
 ### Federated and privacy APIs
 
-- Federated status/round/history/participation APIs (local-node side)
-- Privacy status and parameters
+- `GET /federated/round` — blocked on a real model-version registry (round
+  number alone is available, but "global model version" isn't).
+- `POST /federated/participate` — needs a real training workflow to trigger.
+- `GET /privacy/status` — nothing yet configures whether DP/SecAgg are
+  meant to be on, so there's nothing honest to report here (distinct from
+  `GET /privacy/parameters`, which is implemented and reports real numbers
+  once available).
 
 ### Research and operations APIs
 
-- Research and heatmap APIs
-- Audit trail API (`GET /audit`) — distinct from `GET /logs` above, which is
-  already implemented.
+- Heatmap APIs — deferred; more meaningful once more than one hospital's
+  data exists (better suited to the Global Node).

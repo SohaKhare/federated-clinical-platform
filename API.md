@@ -53,7 +53,6 @@ The Local Node runs inside a participating hospital. It can access that hospital
 | --- | --- | --- |
 | `GET` | `/federated/status` | Return local participation and training status. |
 | `GET` | `/federated/round` | Return the current round, global model version, and local state. |
-| `GET` | `/federated/history` | Return this hospital's previous round participation and metrics. |
 | `POST` | `/federated/participate` | Confirm participation and begin the local training workflow when instructed. |
 | `GET` | `/privacy/status` | Show whether DP and Secure Aggregation are active locally. |
 | `GET` | `/privacy/parameters` | Return configured DP metadata such as epsilon, delta, clipping norm, and noise multiplier. |
@@ -67,7 +66,6 @@ The Local Node runs inside a participating hospital. It can access that hospital
 | `GET` | `/heatmap` | Return authorized, aggregated geographic health indicators. |
 | `GET` | `/heatmap/regions` | Return aggregate statistics for supported regions. |
 | `GET` | `/logs` | Return filtered operational and federated activity logs. |
-| `GET` | `/audit` | Return the append-only security/compliance audit trail. |
 
 ## Global Node API
 
@@ -133,5 +131,6 @@ At the time this document was written:
 - Auth endpoints implemented: `POST /auth/logout`, `GET /auth/me`, plus `GET /auth/google`, `GET /auth/google/callback`, and a local-only onboarding route.
 - All Local patient endpoints implemented: `GET/POST /patients`, `PATCH/GET /patients/{id}`, `GET/POST /patients/{id}/{events}`.
 - Global Node endpoints implemented: `GET /nodes`, `GET /nodes/{id}`, `GET /nodes/{id}/status`, `GET /nodes/{id}/metrics`. Nodes are derived from onboarded local users; participation data comes from the logs table until real rounds exist.
-- Remaining Global, Local model/privacy/research, and Public Health/PDS endpoints are still planned.
-- The Python federated package exists only as scaffolded modules; no training/aggregation logic yet.
+- Local aggregates/federation/research endpoints implemented: `GET /logs`, `GET /federated/status`, `GET /privacy/parameters`, `GET /research/summary`, `GET /research/insights`. All read real data (patients/logs tables) rather than mocks; fields stay honestly `null`/empty until a real federated round or enough patients exist.
+- `GET /federated/round`, `POST /federated/participate`, `GET /privacy/status`, and all Local Model, Global rounds/models, and Public Health/PDS endpoints are still planned — most blocked on the Python federated package producing real training/round data.
+- The Python federated package has real Flower app modules now (`model.py`, `task.py`, `server_app.py`, `client_app.py`, `prepare_data.py`, `run.py`) — training/aggregation code exists, but nothing in it writes to the `logs`/`patients` tables yet, so the backend endpoints above can't see real round activity until that integration exists.

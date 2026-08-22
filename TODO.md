@@ -10,11 +10,12 @@
 ## Foundation
 
 - [x] Project vision & MVP plan (`AGENT.md`)
-- [x] ML architecture & execution flow (`ARCHITECTURE.md`)
-- [x] Data schemas: `patients` + `logs`, ε/δ privacy-budget tracking (`SCHEMA.md`, `federated/schema.md`)
+- [x] ML architecture & execution flow (`ML_ARCHITECTURE.md`)
+- [x] Data schemas: `patients` + `logs`, ε/δ privacy-budget tracking (`SCHEMA.md`)
 - [x] Backend scaffold (Express + TS)
 - [x] Google OAuth + session auth (`backend/src/controllers/auth.controller.ts`)
 - [x] Node roles: `local` / `global` + role-guarded routes (`backend/src/auth/roles.ts`)
+- [x] Per-hospital patient data isolation (`patients.hospital_id`) — one hospital can never read/write another's patient records or events
 
 ## Phase 0 — Scope lock
 
@@ -30,13 +31,13 @@
 
 ## Phase 2 — Federated Learning
 
-- [x] Flower server (`federated/src/federated/server/`)
+- [x] Flower server (`federated/src/federated/server_app.py`)
 - [x] Hospital client (`ClientApp`) — 3 simulated nodes
 - [x] Data partitioning across clients (hospital-based)
 
 ## Phase 3 — FedAvg Aggregation
 
-- [x] FedAvg strategy wiring on server (`federated/src/federated/aggregation/`)
+- [x] FedAvg strategy wiring on server (`federated/src/federated/server_app.py`)
 - [ ] Round tracking + global loss/metrics logging across rounds
 - [ ] Persist round history (maps to `logs` schema)
 
@@ -53,8 +54,8 @@
 
 ## Platform Layer
 
-- [ ] Database implementing `patients`/`logs` schema (Postgres)
-- [ ] FastAPI or extend Express backend: `/federated/status`, `/hospital/summary` returning real data
+- [x] Database implementing `patients`/`logs` schema (Postgres, live on Supabase — `users`, `patients`, `patient_events`, `logs`)
+- [x] Express backend: local-node endpoints returning real data — patients CRUD/events (hospital-isolated), `GET /logs`, `GET /federated/status`, `GET /privacy/parameters`, `GET /research/summary`, `GET /research/insights`. `/api/hospital/summary` is still a static demo stub, not real data.
 - [ ] Docker Compose: flower-server, hospital-a/b/c, backend, db, frontend
 - [ ] Frontend: replace starter template with hospital dashboard + federated server dashboard
 - [ ] Add a local-only presentation control to generate a random synthetic batch of patient records for the selected day
