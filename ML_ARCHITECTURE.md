@@ -1,4 +1,4 @@
-# Privacy-Preserving Federated Clinical Research Platform: ML Setup & Architecture
+# Privacy-Preserving Federated Clinical Research Platform: ML Setup & Architecture in the Federated folder
 
 ## 1. System Overview
 

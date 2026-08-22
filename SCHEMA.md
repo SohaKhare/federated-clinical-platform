@@ -28,8 +28,9 @@ Source of truth for hospital-local patient data. Never leaves the hospital.
 ```
 
 **Notes:**
+
 - `contributed_to_round` — last training round this patient's data was included in. Not a "per-patient weight," just a marker.
-- `updated_at` — drives which patients are picked up for the *next* training round (see query below).
+- `updated_at` — drives which patients are picked up for the _next_ training round (see query below).
 - On patient update/creation: only this record changes. No weight computation happens here.
 
 ---
@@ -49,21 +50,26 @@ This table also acts as the "was it sent" and "last successful round" tracker �
   "metadata": {
     "num_examples": 4213,
     "parameters": {
-      "fc1.weight": [[0.0182, -0.0093], [0.0044, 0.0271]],
-      "fc1.bias":   [0.0011, -0.0005, 0.0032],
+      "fc1.weight": [
+        [0.0182, -0.0093],
+        [0.0044, 0.0271]
+      ],
+      "fc1.bias": [0.0011, -0.0005, 0.0032],
       "fc2.weight": [[0.0509, -0.0117]],
-      "fc2.bias":   [-0.0021, 0.0084]
+      "fc2.bias": [-0.0021, 0.0084]
     },
-    "metrics": { "loss": 0.31 }
+    "metrics": { "loss": 0.31, "epsilon": 3.2, "delta": 1e-5 }
   },
   "status": "confirmed"
 }
 ```
 
 **Field notes:**
+
 - `direction`: `"outgoing"` (hospital → global) or `"incoming"` (global → hospital, next round's weights).
 - `status`: `"pending"` | `"confirmed"` | `"failed"` — this replaces a separate `sent: true/false` column.
 - `metadata.parameters` — the actual model weight arrays (post DP-noise/SecAgg masking if used).
+- `metadata.metrics.epsilon` / `metadata.metrics.delta` — the DP privacy budget spent by this hospital as of this round, as reported by the Opacus `PrivacyEngine` (`get_epsilon(delta)`). `epsilon` is cumulative across rounds for a given node, not just this round's spend — only present on `outgoing` rows, since it's a property of the hospital's own local training, not the broadcast.
 
 **Example incoming (global → hospital) row:**
 
@@ -77,9 +83,9 @@ This table also acts as the "was it sent" and "last successful round" tracker �
   "metadata": {
     "parameters": {
       "fc1.weight": [[0.0179, -0.0091]],
-      "fc1.bias":   [0.0012, -0.0004],
-      "fc2.weight": [[0.0498, -0.0110]],
-      "fc2.bias":   [-0.0019, 0.0081]
+      "fc1.bias": [0.0012, -0.0004],
+      "fc2.weight": [[0.0498, -0.011]],
+      "fc2.bias": [-0.0019, 0.0081]
     }
   },
   "status": "confirmed"
@@ -91,6 +97,7 @@ This table also acts as the "was it sent" and "last successful round" tracker �
 ## Derived queries (no extra tables required)
 
 **Patients to include in the next training round:**
+
 ```sql
 SELECT * FROM patients
 WHERE updated_at > (
@@ -100,9 +107,20 @@ WHERE updated_at > (
 ```
 
 **Whether the current round has been sent:**
+
 ```sql
 SELECT status FROM logs
 WHERE node_id = 'HOSP_A' AND round = 14 AND direction = 'outgoing';
+```
+
+**Current privacy budget spent by a hospital:**
+
+```sql
+SELECT metadata->'metrics'->>'epsilon' AS epsilon
+FROM logs
+WHERE node_id = 'HOSP_A' AND direction = 'outgoing' AND status = 'confirmed'
+ORDER BY round DESC
+LIMIT 1;
 ```
 
 ---
