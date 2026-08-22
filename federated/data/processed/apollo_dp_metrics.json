@@ -1,0 +1,111 @@
+{
+  "hospital": "Apollo",
+  "cohort_summary": {
+    "total_samples": 37,
+    "train_samples": 29,
+    "test_samples": 8,
+    "class_distribution": {
+      "type_1": 28,
+      "other": 9
+    },
+    "train_breakdown": {
+      "type_1": 22,
+      "other": 7
+    },
+    "test_breakdown": {
+      "type_1": 6,
+      "other": 2
+    }
+  },
+  "privacy_parameters": {
+    "delta": 1e-05,
+    "max_grad_norm": 1.0,
+    "noise_multiplier": 0.5,
+    "calculated_epsilon": 41.027129267787124
+  },
+  "training_parameters": {
+    "epochs": 10,
+    "batch_size": 8,
+    "learning_rate": 0.01,
+    "weight_decay": 0.001,
+    "initial_loss": 0.34662450027876884,
+    "final_loss": 0.38472590364258863
+  },
+  "dp_metrics": {
+    "accuracy": 0.75,
+    "precision": 0.75,
+    "recall": 1.0,
+    "f1_score": 0.8571428571428571,
+    "roc_auc": 1.0,
+    "confusion_matrix": [
+      [
+        0,
+        2
+      ],
+      [
+        0,
+        6
+      ]
+    ],
+    "probabilities": [
+      0.6227635145187378,
+      0.5820775032043457,
+      0.5296779274940491,
+      0.5859526991844177,
+      0.5465367436408997,
+      0.5602626204490662,
+      0.572843611240387,
+      0.5778120160102844
+    ],
+    "predictions": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  "comparison_with_non_private": {
+    "non_private": {
+      "accuracy": 0.875,
+      "precision": 1.0,
+      "recall": 0.8333333333333334,
+      "f1_score": 0.9090909090909091,
+      "roc_auc": 1.0,
+      "confusion_matrix": [
+        [
+          2,
+          0
+        ],
+        [
+          1,
+          5
+        ]
+      ],
+      "epsilon": "Infinity",
+      "delta": 0.0
+    },
+    "opacus_dp": {
+      "accuracy": 0.75,
+      "precision": 0.75,
+      "recall": 1.0,
+      "f1_score": 0.8571428571428571,
+      "roc_auc": 1.0,
+      "confusion_matrix": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          6
+        ]
+      ],
+      "epsilon": 41.027129267787124,
+      "delta": 1e-05
+    }
+  }
+}

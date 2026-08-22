@@ -1,0 +1,346 @@
+{
+  "milestone": "Milestone 5B: Independent Differentially Private Local Training for All 3 Hospitals",
+  "privacy_configuration": {
+    "delta": 1e-05,
+    "max_grad_norm": 1.0,
+    "noise_multiplier": 0.5,
+    "epochs": 10,
+    "batch_size": 8,
+    "seed": 42
+  },
+  "hospitals": {
+    "apollo": {
+      "hospital": "Apollo",
+      "cohort_summary": {
+        "total_samples": 37,
+        "train_samples": 29,
+        "test_samples": 8,
+        "class_distribution": {
+          "type_1": 28,
+          "other": 9
+        },
+        "train_breakdown": {
+          "type_1": 22,
+          "other": 7
+        },
+        "test_breakdown": {
+          "type_1": 6,
+          "other": 2
+        }
+      },
+      "privacy_parameters": {
+        "delta": 1e-05,
+        "max_grad_norm": 1.0,
+        "noise_multiplier": 0.5,
+        "calculated_epsilon": 41.027129267787124
+      },
+      "training_parameters": {
+        "epochs": 10,
+        "batch_size": 8,
+        "learning_rate": 0.01,
+        "weight_decay": 0.001,
+        "initial_loss": 0.34662450027876884,
+        "final_loss": 0.38472590364258863
+      },
+      "dp_metrics": {
+        "accuracy": 0.75,
+        "precision": 0.75,
+        "recall": 1.0,
+        "f1_score": 0.8571428571428571,
+        "roc_auc": 1.0,
+        "confusion_matrix": [
+          [
+            0,
+            2
+          ],
+          [
+            0,
+            6
+          ]
+        ],
+        "probabilities": [
+          0.6227635145187378,
+          0.5820775032043457,
+          0.5296779274940491,
+          0.5859526991844177,
+          0.5465367436408997,
+          0.5602626204490662,
+          0.572843611240387,
+          0.5778120160102844
+        ],
+        "predictions": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "comparison_with_non_private": {
+        "non_private": {
+          "accuracy": 0.875,
+          "precision": 1.0,
+          "recall": 0.8333333333333334,
+          "f1_score": 0.9090909090909091,
+          "roc_auc": 1.0,
+          "confusion_matrix": [
+            [
+              2,
+              0
+            ],
+            [
+              1,
+              5
+            ]
+          ],
+          "epsilon": "Infinity",
+          "delta": 0.0
+        },
+        "opacus_dp": {
+          "accuracy": 0.75,
+          "precision": 0.75,
+          "recall": 1.0,
+          "f1_score": 0.8571428571428571,
+          "roc_auc": 1.0,
+          "confusion_matrix": [
+            [
+              0,
+              2
+            ],
+            [
+              0,
+              6
+            ]
+          ],
+          "epsilon": 41.027129267787124,
+          "delta": 1e-05
+        }
+      }
+    },
+    "kem": {
+      "hospital": "Kem",
+      "cohort_summary": {
+        "total_samples": 37,
+        "train_samples": 29,
+        "test_samples": 8,
+        "class_distribution": {
+          "type_1": 23,
+          "other": 14
+        },
+        "train_breakdown": {
+          "type_1": 18,
+          "other": 11
+        },
+        "test_breakdown": {
+          "type_1": 5,
+          "other": 3
+        }
+      },
+      "privacy_parameters": {
+        "delta": 1e-05,
+        "max_grad_norm": 1.0,
+        "noise_multiplier": 0.5,
+        "calculated_epsilon": 41.027129267787124
+      },
+      "training_parameters": {
+        "epochs": 10,
+        "batch_size": 8,
+        "learning_rate": 0.01,
+        "weight_decay": 0.001,
+        "initial_loss": 0.6325362283608009,
+        "final_loss": 0.5058877673642389
+      },
+      "dp_metrics": {
+        "accuracy": 0.625,
+        "precision": 0.625,
+        "recall": 1.0,
+        "f1_score": 0.7692307692307693,
+        "roc_auc": 1.0,
+        "confusion_matrix": [
+          [
+            0,
+            3
+          ],
+          [
+            0,
+            5
+          ]
+        ],
+        "probabilities": [
+          0.5880756974220276,
+          0.5762113928794861,
+          0.5213819146156311,
+          0.6038420796394348,
+          0.5190377235412598,
+          0.6073964834213257,
+          0.5220441222190857,
+          0.5958257913589478
+        ],
+        "predictions": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "comparison_with_non_private": {
+        "non_private": {
+          "accuracy": 0.875,
+          "precision": 0.8333333333333334,
+          "recall": 1.0,
+          "f1_score": 0.9090909090909091,
+          "roc_auc": 1.0,
+          "confusion_matrix": [
+            [
+              2,
+              1
+            ],
+            [
+              0,
+              5
+            ]
+          ],
+          "epsilon": "Infinity",
+          "delta": 0.0
+        },
+        "opacus_dp": {
+          "accuracy": 0.625,
+          "precision": 0.625,
+          "recall": 1.0,
+          "f1_score": 0.7692307692307693,
+          "roc_auc": 1.0,
+          "confusion_matrix": [
+            [
+              0,
+              3
+            ],
+            [
+              0,
+              5
+            ]
+          ],
+          "epsilon": 41.027129267787124,
+          "delta": 1e-05
+        }
+      }
+    },
+    "fortis": {
+      "hospital": "Fortis",
+      "cohort_summary": {
+        "total_samples": 37,
+        "train_samples": 29,
+        "test_samples": 8,
+        "class_distribution": {
+          "type_1": 18,
+          "other": 19
+        },
+        "train_breakdown": {
+          "type_1": 14,
+          "other": 15
+        },
+        "test_breakdown": {
+          "type_1": 4,
+          "other": 4
+        }
+      },
+      "privacy_parameters": {
+        "delta": 1e-05,
+        "max_grad_norm": 1.0,
+        "noise_multiplier": 0.5,
+        "calculated_epsilon": 41.027129267787124
+      },
+      "training_parameters": {
+        "epochs": 10,
+        "batch_size": 8,
+        "learning_rate": 0.01,
+        "weight_decay": 0.001,
+        "initial_loss": 0.7810882001087583,
+        "final_loss": 0.6974621045178381
+      },
+      "dp_metrics": {
+        "accuracy": 0.5,
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1_score": 0.6666666666666666,
+        "roc_auc": 1.0,
+        "confusion_matrix": [
+          [
+            0,
+            4
+          ],
+          [
+            0,
+            4
+          ]
+        ],
+        "probabilities": [
+          0.5504271388053894,
+          0.5190696716308594,
+          0.5538729429244995,
+          0.555000901222229,
+          0.5201653242111206,
+          0.590584933757782,
+          0.5262143015861511,
+          0.5825047492980957
+        ],
+        "predictions": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "comparison_with_non_private": {
+        "non_private": {
+          "accuracy": 0.875,
+          "precision": 0.8,
+          "recall": 1.0,
+          "f1_score": 0.8888888888888888,
+          "roc_auc": 1.0,
+          "confusion_matrix": [
+            [
+              3,
+              1
+            ],
+            [
+              0,
+              4
+            ]
+          ],
+          "epsilon": "Infinity",
+          "delta": 0.0
+        },
+        "opacus_dp": {
+          "accuracy": 0.5,
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1_score": 0.6666666666666666,
+          "roc_auc": 1.0,
+          "confusion_matrix": [
+            [
+              0,
+              4
+            ],
+            [
+              0,
+              4
+            ]
+          ],
+          "epsilon": 41.027129267787124,
+          "delta": 1e-05
+        }
+      }
+    }
+  }
+}

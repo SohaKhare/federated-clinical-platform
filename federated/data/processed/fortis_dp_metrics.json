@@ -1,0 +1,111 @@
+{
+  "hospital": "Fortis",
+  "cohort_summary": {
+    "total_samples": 37,
+    "train_samples": 29,
+    "test_samples": 8,
+    "class_distribution": {
+      "type_1": 18,
+      "other": 19
+    },
+    "train_breakdown": {
+      "type_1": 14,
+      "other": 15
+    },
+    "test_breakdown": {
+      "type_1": 4,
+      "other": 4
+    }
+  },
+  "privacy_parameters": {
+    "delta": 1e-05,
+    "max_grad_norm": 1.0,
+    "noise_multiplier": 0.5,
+    "calculated_epsilon": 41.027129267787124
+  },
+  "training_parameters": {
+    "epochs": 10,
+    "batch_size": 8,
+    "learning_rate": 0.01,
+    "weight_decay": 0.001,
+    "initial_loss": 0.7810882001087583,
+    "final_loss": 0.6974621045178381
+  },
+  "dp_metrics": {
+    "accuracy": 0.5,
+    "precision": 0.5,
+    "recall": 1.0,
+    "f1_score": 0.6666666666666666,
+    "roc_auc": 1.0,
+    "confusion_matrix": [
+      [
+        0,
+        4
+      ],
+      [
+        0,
+        4
+      ]
+    ],
+    "probabilities": [
+      0.5504271388053894,
+      0.5190696716308594,
+      0.5538729429244995,
+      0.555000901222229,
+      0.5201653242111206,
+      0.590584933757782,
+      0.5262143015861511,
+      0.5825047492980957
+    ],
+    "predictions": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  "comparison_with_non_private": {
+    "non_private": {
+      "accuracy": 0.875,
+      "precision": 0.8,
+      "recall": 1.0,
+      "f1_score": 0.8888888888888888,
+      "roc_auc": 1.0,
+      "confusion_matrix": [
+        [
+          3,
+          1
+        ],
+        [
+          0,
+          4
+        ]
+      ],
+      "epsilon": "Infinity",
+      "delta": 0.0
+    },
+    "opacus_dp": {
+      "accuracy": 0.5,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1_score": 0.6666666666666666,
+      "roc_auc": 1.0,
+      "confusion_matrix": [
+        [
+          0,
+          4
+        ],
+        [
+          0,
+          4
+        ]
+      ],
+      "epsilon": 41.027129267787124,
+      "delta": 1e-05
+    }
+  }
+}
