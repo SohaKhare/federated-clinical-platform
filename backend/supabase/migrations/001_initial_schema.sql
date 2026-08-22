@@ -4,21 +4,14 @@ create table if not exists public.users (
   user_id uuid primary key default gen_random_uuid(),
   google_id text not null unique,
   email text not null unique,
-  hospitalName text,
+  hospital_name text,
   picture text,
   role text not null check (role in ('local', 'global')),
-  node_id text,
   pincode text,
   geolocation jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  constraint users_role_node_check check (
-    (role = 'local' and node_id is not null)
-    or (role = 'global')
-  )
+  updated_at timestamptz not null default now()
 );
-
-create index if not exists users_node_id_idx on public.users (node_id);
 
 create table if not exists public.patients (
   patient_id uuid primary key default gen_random_uuid(),

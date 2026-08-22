@@ -27,16 +27,15 @@ model User {
   userId       String   @id @default(uuid()) @map("user_id") @db.Uuid
   googleId     String   @unique @map("google_id")
   email        String   @unique
-  name         String?
   picture      String?
   role         UserRole @default(local)
-  nodeId       String?  @map("node_id")
+  hospitalName String?  @map("hospital_name")
   pincode      String?
   geolocation  Json     @default("{}")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  @@index([nodeId])
+  @@index([user_id])
   @@map("users")
 }
 

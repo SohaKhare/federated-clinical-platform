@@ -17,7 +17,6 @@ export async function upsertLocalUser(input: {
       googleId: input.googleId,
       email: input.email,
       role: "local",
-      nodeId: "PENDING",
       ...(input.picture !== undefined ? { picture: input.picture } : {}),
     },
   });
@@ -32,7 +31,7 @@ export async function completeOnboarding(
   const user = await prisma.user.update({
     where: { userId },
     data: {
-      name: input.hospitalName,
+      hospitalName: input.hospitalName,
       pincode: input.pincode,
       geolocation: input.geolocation as Prisma.InputJsonValue,
     },
@@ -45,10 +44,9 @@ function toUserSession(user: {
   userId: string;
   googleId: string;
   email: string;
-  name: string | null;
   picture: string | null;
   role: "local" | "global";
-  nodeId: string | null;
+  hospitalName: string | null;
   pincode: string | null;
   geolocation: unknown;
 }): UserSession {
@@ -56,10 +54,10 @@ function toUserSession(user: {
     userId: user.userId,
     googleId: user.googleId,
     email: user.email,
-    ...(user.name ? { name: user.name } : {}),
+    ...(user.hospitalName ? { hospitalName: user.hospitalName } : {}),
     ...(user.picture ? { picture: user.picture } : {}),
     node: "local",
     role: "local",
-    onboarded: Boolean(user.name && user.pincode),
+    onboarded: Boolean(user.hospitalName && user.pincode),
   };
 }
