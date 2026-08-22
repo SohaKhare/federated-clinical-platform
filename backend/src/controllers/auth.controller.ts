@@ -7,6 +7,7 @@ import {
   getGoogleClient,
   getGoogleClientId,
 } from "../services/google-auth.service.js";
+import { upsertLocalUser } from "../services/user.service.js";
 
 function isValidNode(value: string): value is UserRole {
   return isValidRole(value);
@@ -89,7 +90,7 @@ export async function googleCallback(req: Request, res: Response) {
       });
     }
 
-    const client = getGoogleClient(node);
+    const client = getGoogleClient("local");
 
     // Exchange authorization code for tokens.
     const { tokens } = await client.getToken(code);
@@ -105,7 +106,7 @@ export async function googleCallback(req: Request, res: Response) {
     // Verify the Google ID token.
     const ticket = await client.verifyIdToken({
       idToken: tokens.id_token,
-      audience: getGoogleClientId(node),
+      audience: getGoogleClientId("local"),
     });
 
     const payload = ticket.getPayload();
@@ -116,15 +117,11 @@ export async function googleCallback(req: Request, res: Response) {
       });
     }
 
-    // Store authenticated user in our application session.
-    req.session.user = {
+    req.session.user = await upsertLocalUser({
       googleId: payload.sub,
       email: payload.email,
-      node,
-      role: node,
-      ...(payload.name !== undefined ? { name: payload.name } : {}),
       ...(payload.picture !== undefined ? { picture: payload.picture } : {}),
-    };
+    });
 
     // OAuth information is no longer needed.
     delete req.session.oauthState;

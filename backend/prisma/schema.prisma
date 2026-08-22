@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  local
+  global
+}
+
+enum LogDirection {
+  outgoing
+  incoming
+}
+
+enum LogStatus {
+  pending
+  confirmed
+  failed
+}
+
+model User {
+  userId       String   @id @default(uuid()) @map("user_id") @db.Uuid
+  googleId     String   @unique @map("google_id")
+  email        String   @unique
+  name         String?
+  picture      String?
+  role         UserRole @default(local)
+  nodeId       String?  @map("node_id")
+  pincode      String?
+  geolocation  Json     @default("{}")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([nodeId])
+  @@map("users")
+}
+
+model Patient {
+  patientId          String   @id @default(uuid()) @map("patient_id") @db.Uuid
+  name               String
+  age                Int
+  sex                String
+  symptoms           String[] @default([])
+  diagnosedDiseases  String[] @default([]) @map("diagnosed_diseases")
+  healthConditions   Json     @default("{}") @map("health_conditions")
+  contributedToRound Int?     @map("contributed_to_round")
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@index([updatedAt])
+  @@map("patients")
+}
+
+model Log {
+  logId     String       @id @default(uuid()) @map("log_id") @db.Uuid
+  nodeId    String       @map("node_id")
+  timestamp DateTime     @default(now())
+  direction LogDirection
+  round     Int
+  metadata  Json         @default("{}")
+  status    LogStatus
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  @@unique([nodeId, round, direction])
+  @@index([nodeId, round])
+  @@index([status])
+  @@map("logs")
+}
