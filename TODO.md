@@ -1,6 +1,6 @@
 # Project TODO
 
-> Status legend: ✅ done · 🔨 in progress · ⬜ not started
+> Status legend: [x] done · [~] in progress · [ ] not started
 >
 > **Direction:** `AGENT.md` is the current source of truth (tabular treatment/outcome model).
 > The older pitch doc (chest X-ray / CheXpert) is superseded — see note at bottom.
