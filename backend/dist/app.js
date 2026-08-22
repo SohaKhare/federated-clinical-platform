@@ -6,9 +6,15 @@ import demoRoutes from "./routes/demo.routes.js";
 import { env } from "./config/env.js";
 import patientRoutes from "./routes/patient.routes.js";
 import nodeRoutes from "./routes/node.routes.js";
+import logRoutes from "./routes/log.routes.js";
 const app = express();
 app.use(cors({
-    origin: env.frontendUrl,
+    origin: (origin, callback) => {
+        if (!origin || env.corsOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
 }));
 app.use(express.json());
@@ -38,6 +44,7 @@ app.get("/health", (_req, res) => {
 app.use("/auth", authRoutes);
 app.use("/patients", patientRoutes);
 app.use("/nodes", nodeRoutes);
+app.use("/logs", logRoutes);
 app.use("/api", demoRoutes);
 export default app;
 //# sourceMappingURL=app.js.map

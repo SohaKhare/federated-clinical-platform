@@ -30,10 +30,10 @@ serverapp = "federated.server_app:app"
 clientapp = "federated.client_app:app"
 
 [tool.flwr.app.config]
-num-server-rounds = 3
-local-epochs = 1
-batch-size = 64
-learning-rate = 0.001
+num-server-rounds = 1
+local-epochs = 3
+batch-size = 32
+learning-rate = 0.01
 
 [[tool.uv.index]]
 name = "pytorch-cpu"

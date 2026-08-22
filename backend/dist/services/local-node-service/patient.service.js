@@ -1,77 +1,106 @@
 import { prisma } from "../../config/prisma.js";
+const EMPTY_SNAPSHOT = {
+    symptoms: [],
+    diagnosed_diseases: [],
+    health_conditions: {},
+};
 export async function createPatient(patient, hospitalId) {
-    const createdPatient = await prisma.patient.create({
-        data: {
-            hospitalId,
-            name: patient.name,
-            age: patient.age,
-            sex: patient.sex,
+    return prisma.$transaction(async (transaction) => {
+        const createdPatient = await transaction.patient.create({
+            data: {
+                hospitalId,
+                name: patient.name,
+                age: patient.age,
+                sex: patient.sex,
+            },
+        });
+        const snapshot = {
             symptoms: patient.symptoms,
-            diagnosedDiseases: patient.diagnosed_diseases,
-            healthConditions: patient.health_conditions,
-        },
+            diagnosed_diseases: patient.diagnosed_diseases,
+            health_conditions: patient.health_conditions,
+        };
+        await transaction.patientEvent.create({
+            data: {
+                patientId: createdPatient.patientId,
+                eventType: "patient_created",
+                eventData: snapshot,
+            },
+        });
+        return toPatient(createdPatient, snapshot);
     });
-    return toPatient(createdPatient);
 }
 export async function getPatients(hospitalId) {
     const patients = await prisma.patient.findMany({
         where: { hospitalId },
         orderBy: { updatedAt: "desc" },
     });
-    return patients.map(toPatient);
+    if (patients.length === 0) {
+        return [];
+    }
+    const latestSnapshotEvents = await prisma.patientEvent.findMany({
+        where: {
+            patientId: { in: patients.map((patient) => patient.patientId) },
+            eventType: { in: ["patient_created", "patient_updated"] },
+        },
+        orderBy: { occurredAt: "desc" },
+        distinct: ["patientId"],
+    });
+    const snapshotByPatientId = new Map(latestSnapshotEvents.map((event) => [
+        event.patientId,
+        toSnapshot(event.eventData),
+    ]));
+    return patients.map((patient) => toPatient(patient, snapshotByPatientId.get(patient.patientId) ?? EMPTY_SNAPSHOT));
 }
 export async function getPatientById(patientId) {
     const patient = await prisma.patient.findUnique({
         where: { patientId },
     });
-    return patient ? toPatient(patient) : null;
+    if (!patient) {
+        return null;
+    }
+    const snapshot = await getLatestSnapshot(patientId, prisma);
+    return toPatient(patient, snapshot);
 }
 export async function updatePatient(patientId, input) {
-    const updatedPatient = await prisma.$transaction(async (transaction) => {
+    const updated = await prisma.$transaction(async (transaction) => {
         const existingPatient = await transaction.patient.findUnique({
             where: { patientId },
         });
         if (!existingPatient) {
             return null;
         }
-        const previous = toSnapshot(toPatient(existingPatient));
+        const clinicalFieldsChanged = input.symptoms !== undefined ||
+            input.diagnosed_diseases !== undefined ||
+            input.health_conditions !== undefined;
+        let snapshot = await getLatestSnapshot(patientId, transaction);
+        if (clinicalFieldsChanged) {
+            snapshot = {
+                symptoms: input.symptoms ?? snapshot.symptoms,
+                diagnosed_diseases: input.diagnosed_diseases ?? snapshot.diagnosed_diseases,
+                health_conditions: input.health_conditions ?? snapshot.health_conditions,
+            };
+            await transaction.patientEvent.create({
+                data: {
+                    patientId,
+                    eventType: "patient_updated",
+                    eventData: snapshot,
+                },
+            });
+        }
         const patient = await transaction.patient.update({
             where: { patientId },
             data: {
                 ...(input.name !== undefined ? { name: input.name } : {}),
                 ...(input.age !== undefined ? { age: input.age } : {}),
                 ...(input.sex !== undefined ? { sex: input.sex } : {}),
-                ...(input.symptoms !== undefined ? { symptoms: input.symptoms } : {}),
-                ...(input.diagnosed_diseases !== undefined
-                    ? { diagnosedDiseases: input.diagnosed_diseases }
-                    : {}),
-                ...(input.health_conditions !== undefined
-                    ? { healthConditions: input.health_conditions }
-                    : {}),
+                // Always touch updatedAt, even for a clinical-only change, since it
+                // drives which patients are picked up for the next training round.
+                updatedAt: new Date(),
             },
         });
-        const current = toSnapshot(toPatient(patient));
-        // Stack up every prior snapshot: the most recent one goes on top,
-        // ahead of whatever the last patient_updated event had already stacked.
-        const lastUpdateEvent = await transaction.patientEvent.findFirst({
-            where: { patientId, eventType: "patient_updated" },
-            orderBy: { occurredAt: "desc" },
-        });
-        const priorSnapshots = getPreviousSnapshots(lastUpdateEvent?.eventData);
-        const eventData = {
-            current,
-            previous_snapshots: [previous, ...priorSnapshots],
-        };
-        await transaction.patientEvent.create({
-            data: {
-                patientId,
-                eventType: "patient_updated",
-                eventData: eventData,
-            },
-        });
-        return patient;
+        return { patient, snapshot };
     });
-    return updatedPatient ? toPatient(updatedPatient) : null;
+    return updated ? toPatient(updated.patient, updated.snapshot) : null;
 }
 export async function getPatientEvents(patientId) {
     const events = await prisma.patientEvent.findMany({
@@ -91,39 +120,49 @@ export async function addPatientEvent(patientId, event) {
     });
     return toPatientEvent(createdEvent);
 }
-function toPatient(patient) {
+/**
+ * Every patient gets a `patient_created` event in the same transaction it's
+ * created in, so this should always find one. Falls back to an empty
+ * snapshot only if that invariant is ever somehow violated.
+ */
+async function getLatestSnapshot(patientId, client) {
+    const event = await client.patientEvent.findFirst({
+        where: { patientId, eventType: { in: ["patient_created", "patient_updated"] } },
+        orderBy: { occurredAt: "desc" },
+    });
+    return event ? toSnapshot(event.eventData) : EMPTY_SNAPSHOT;
+}
+function toSnapshot(eventData) {
+    if (!eventData || typeof eventData !== "object" || Array.isArray(eventData)) {
+        return EMPTY_SNAPSHOT;
+    }
+    const data = eventData;
+    return {
+        symptoms: Array.isArray(data.symptoms) ? data.symptoms : [],
+        diagnosed_diseases: Array.isArray(data.diagnosed_diseases)
+            ? data.diagnosed_diseases
+            : [],
+        health_conditions: typeof data.health_conditions === "object" &&
+            data.health_conditions !== null &&
+            !Array.isArray(data.health_conditions)
+            ? data.health_conditions
+            : {},
+    };
+}
+function toPatient(patient, snapshot) {
     return {
         patient_id: patient.patientId,
         hospital_id: patient.hospitalId,
         name: patient.name,
         age: patient.age,
         sex: patient.sex,
-        symptoms: patient.symptoms,
-        diagnosed_diseases: patient.diagnosedDiseases,
-        health_conditions: patient.healthConditions,
+        symptoms: snapshot.symptoms,
+        diagnosed_diseases: snapshot.diagnosed_diseases,
+        health_conditions: snapshot.health_conditions,
         contributed_to_round: patient.contributedToRound,
         updated_at: patient.updatedAt.toISOString(),
         created_at: patient.createdAt.toISOString(),
     };
-}
-function toSnapshot(patient) {
-    return {
-        name: patient.name,
-        age: patient.age,
-        sex: patient.sex,
-        symptoms: patient.symptoms,
-        diagnosed_diseases: patient.diagnosed_diseases,
-        health_conditions: patient.health_conditions,
-    };
-}
-function getPreviousSnapshots(eventData) {
-    if (!eventData ||
-        typeof eventData !== "object" ||
-        Array.isArray(eventData) ||
-        !Array.isArray(eventData.previous_snapshots)) {
-        return [];
-    }
-    return eventData.previous_snapshots;
 }
 function toPatientEvent(event) {
     return {

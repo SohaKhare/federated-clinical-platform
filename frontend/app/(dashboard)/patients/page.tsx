@@ -1,6 +1,7 @@
 import styles from './patients.module.css';
 import { api } from '../../../lib/api';
 import { Search, Plus } from 'lucide-react';
+import PresentationBatchButton from '../../components/PresentationBatchButton';
 
 export default async function PatientsPage() {
   const patients = await api.getPatients();
@@ -16,6 +17,8 @@ export default async function PatientsPage() {
           <Plus size={16} /> Add Patient
         </button>
       </div>
+
+      <PresentationBatchButton />
 
       <div className={styles.searchBar}>
         <Search size={18} color="#666" />

@@ -23,7 +23,7 @@ def main(grid: Grid, context: Context) -> None:
         min_available_nodes=3,
     )
     rounds = int(context.run_config.get("num-server-rounds", 3))
-    learning_rate = float(context.run_config.get("learning-rate", 0.001))
+    learning_rate = float(context.run_config.get("learning-rate", 0.01))
     print(f"Starting FedAvg with 3 clients for {rounds} rounds")
     result = strategy.start(
         grid=grid,

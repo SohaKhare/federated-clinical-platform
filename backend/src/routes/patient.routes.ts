@@ -7,6 +7,7 @@ import {
   getPatientEvents,
   addPatientEvent,
   updatePatient,
+  getPresentationBatch,
 } from "../controllers/local-node/patient.controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.middleware.js";
 
@@ -15,6 +16,8 @@ const router = Router();
 router.use(requireAuth, requireRole("local"));
 
 router.get("/", getPatients);
+
+router.get("/presentation-batch", getPresentationBatch);
 
 router.post("/", createPatient);
 

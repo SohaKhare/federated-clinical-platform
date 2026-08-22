@@ -32,11 +32,14 @@ def _run(model: ClinicalModel, loader, optimizer=None) -> tuple[float, float]:
 def train(msg: Message, context: Context) -> Message:
     client_id = int(context.node_config["partition-id"])
     batch_size = int(context.run_config.get("batch-size", 64))
+    local_epochs = int(context.run_config.get("local-epochs", 10))
     train_loader, _, input_size = load_client_data(client_id, batch_size)
     model = ClinicalModel(input_size)
     model.load_state_dict(msg.content["arrays"].to_torch_state_dict())
     optimizer = torch.optim.Adam(model.parameters(), lr=float(msg.content["config"]["lr"]))
-    loss, accuracy = _run(model, train_loader, optimizer)
+    loss = accuracy = 0.0
+    for _ in range(local_epochs):
+        loss, accuracy = _run(model, train_loader, optimizer)
     metrics = MetricRecord({"train_loss": loss, "train_accuracy": accuracy, "num-examples": len(train_loader.dataset)})
     return Message(
         content=RecordDict({"arrays": ArrayRecord(model.state_dict()), "metrics": metrics}),

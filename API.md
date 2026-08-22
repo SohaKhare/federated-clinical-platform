@@ -33,6 +33,7 @@ The Local Node runs inside a participating hospital. It can access that hospital
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `GET` | `/patients` | List authorized local patients with pagination and filters. |
+| `GET` | `/patients/presentation-batch` | Return 10–20 held-out de-identified demo rows for the logged-in hospital. |
 | `POST` | `/patients` | Create a local patient record. |
 | `GET` | `/patients/{id}` | Return one local patient's profile. |
 | `PATCH` | `/patients/{id}` | Update a patient and append a before/current/change event snapshot. |
@@ -122,6 +123,149 @@ These are secondary APIs and should be implemented after the federated clinical 
 
 PDS endpoints provide explainable decision support only. They must not automatically allocate resources or prescribe an intervention for an individual.
 
+## Backend ↔ Federated Connection
+
+Three components talk to each other:
+
+```
+frontend (Next.js :3000)  --REST + session cookies-->  backend (Express :5000)
+backend (Express :5000)   --HTTP bridge (planned)-->   federated (Python/Flower :8000)
+federated (Flower)        --model params + metrics-->  backend (writes to `logs`, `models`)
+```
+
+- **Frontend → Backend** is live today. Cookie-based sessions (`credentials: include`), CORS restricted to origins in `CORS_ORIGINS`.
+- **Federated → Backend** is server-to-server, so browser CORS does not apply; the backend authenticates it with a shared secret header instead.
+- **Today**, the Python package runs standalone as an in-process Flower *simulation* (`run-federated`). There is no HTTP server in `federated/` yet — the endpoints below are the **planned bridge contract**, kept here so both sides build against the same shapes.
+
+### Planned bridge endpoints (Python side)
+
+#### `POST /federation/runs`
+
+Purpose: The backend asks the federated service to start a training run for one hospital node. The request carries only non-sensitive run configuration — never patient records.
+
+Input:
+
+```json
+{
+  "node_id": "uuid-of-local-user",
+  "round": 14,
+  "config": {
+    "num-server-rounds": 3,
+    "local-epochs": 10,
+    "batch-size": 32,
+    "learning-rate": 0.01
+  }
+}
+```
+
+Headers:
+
+```text
+Content-Type: application/json
+X-Federation-Key: <shared secret from env>
+```
+
+Expected response `202`:
+
+```json
+{
+  "run_id": "run_9f3c",
+  "node_id": "uuid-of-local-user",
+  "status": "started"
+}
+```
+
+Invalid input response `400`:
+
+```json
+{
+  "message": "node_id, round, and config.num-server-rounds are required."
+}
+```
+
+Missing/wrong secret response `401`:
+
+```json
+{
+  "message": "Invalid federation key."
+}
+```
+
+#### `GET /federation/runs/{run_id}`
+
+Purpose: Poll run progress and collect per-round metrics for this node only.
+
+Expected response `200` while running:
+
+```json
+{
+  "run_id": "run_9f3c",
+  "node_id": "uuid-of-local-user",
+  "status": "running",
+  "current_round": 2,
+  "total_rounds": 3
+}
+```
+
+Expected response `200` when finished:
+
+```json
+{
+  "run_id": "run_9f3c",
+  "node_id": "uuid-of-local-user",
+  "status": "completed",
+  "current_round": 3,
+  "total_rounds": 3,
+  "metrics": [
+    {
+      "round": 1,
+      "direction": "outgoing",
+      "metadata": {
+        "num_examples": 184,
+        "train_loss": 0.5124,
+        "train_accuracy": 0.7612
+      }
+    },
+    {
+      "round": 1,
+      "direction": "incoming",
+      "metadata": {
+        "num_examples": 184,
+        "eval_loss": 0.4761,
+        "eval_accuracy": 0.7931
+      }
+    },
+    {
+      "round": 2,
+      "direction": "outgoing",
+      "metadata": {
+        "num_examples": 184,
+        "train_loss": 0.4557,
+        "train_accuracy": 0.8018
+      }
+    }
+  ],
+  "global_model_version": "v3",
+  "model_artifact": "/models/clinical_model.pt"
+}
+```
+
+Expected response `404` for unknown runs:
+
+```json
+{
+  "message": "Unknown run_id."
+}
+```
+
+The `metrics[].metadata` objects above map 1:1 onto the `logs` table rows the backend already reads via `GET /logs` (`direction`, `round`, `metadata`, `status: "confirmed"`). On completion the backend writes one log row per round entry — nothing else crosses the boundary. Model weights stay inside the federated service; the backend receives only the saved artifact path/version reference.
+
+### What must never cross this boundary
+
+- Patient records, patient IDs, or any patient-level payload.
+- Raw per-hospital model updates before DP/secure aggregation (once implemented).
+- Anything beyond: run config, run status, aggregated metrics, model version references.
+
 ## Current Implementation Status
 
 At the time this document was written:
@@ -131,6 +275,9 @@ At the time this document was written:
 - Auth endpoints implemented: `POST /auth/logout`, `GET /auth/me`, plus `GET /auth/google`, `GET /auth/google/callback`, and a local-only onboarding route.
 - All Local patient endpoints implemented: `GET/POST /patients`, `PATCH/GET /patients/{id}`, `GET/POST /patients/{id}/{events}`.
 - Global Node endpoints implemented: `GET /nodes`, `GET /nodes/{id}`, `GET /nodes/{id}/status`, `GET /nodes/{id}/metrics`. Nodes are derived from onboarded local users; participation data comes from the logs table until real rounds exist.
+- CORS is configured on the backend against a comma-separated origin allowlist (`CORS_ORIGINS`, falling back to `FRONTEND_URL`) with credentials enabled.
+- The Python federated package trains a heart-disease classifier via Flower simulation (`run-federated`: 3 clients, FedAvg, saves `models/clinical_model.pt`); there is no HTTP server yet, so the Backend ↔ Federated bridge endpoints above are still planned.
+- Remaining Global, Local model/privacy/research, and Public Health/PDS endpoints are still planned.
 - Local aggregates/federation/research endpoints implemented: `GET /logs`, `GET /federated/status`, `GET /privacy/parameters`, `GET /research/summary`, `GET /research/insights`. All read real data (patients/logs tables) rather than mocks; fields stay honestly `null`/empty until a real federated round or enough patients exist.
 - `GET /federated/round`, `POST /federated/participate`, `GET /privacy/status`, and all Local Model, Global rounds/models, and Public Health/PDS endpoints are still planned — most blocked on the Python federated package producing real training/round data.
 - The Python federated package has real Flower app modules now (`model.py`, `task.py`, `server_app.py`, `client_app.py`, `prepare_data.py`, `run.py`) — training/aggregation code exists, but nothing in it writes to the `logs`/`patients` tables yet, so the backend endpoints above can't see real round activity until that integration exists.

@@ -19,15 +19,15 @@
 
 ## Phase 0 — Scope lock
 
-- [ ] Confirm research question & target variable (e.g. readmission / adverse outcome from patient features)
-- [ ] Pick public/de-identified tabular dataset(s) for simulated hospitals
+- [x] Confirm research question & target variable: heart-disease presence from age, sex, symptoms, and clinical measurements
+- [x] Pick public/de-identified tabular dataset(s) for simulated hospitals: UCI Cleveland Heart Disease
 
 ## Phase 1 — Clinical Learning Model (core ML)
 
 - [x] Dataset download + preprocessing script (pandas)
 - [x] Feature engineering & train/eval splits per hospital partition
 - [x] `ClinicalModel(nn.Module)` in PyTorch
-- [ ] Local train/eval loop with metrics (AUROC/F1/loss)
+- [x] Local train/eval loop with metrics (loss/accuracy)
 
 ## Phase 2 — Federated Learning
 
@@ -58,7 +58,7 @@
 - [x] Express backend: local-node endpoints returning real data — patients CRUD/events (hospital-isolated), `GET /logs`, `GET /federated/status`, `GET /privacy/parameters`, `GET /research/summary`, `GET /research/insights`. `/api/hospital/summary` is still a static demo stub, not real data.
 - [ ] Docker Compose: flower-server, hospital-a/b/c, backend, db, frontend
 - [ ] Frontend: replace starter template with hospital dashboard + federated server dashboard
-- [ ] Add a local-only presentation control to generate a random synthetic batch of patient records for the selected day
+- [x] Add a local-only presentation control using 10–20 held-out real patient rows for the selected day
 - [ ] Clearly label generated records as demo/synthetic data and keep them separate from real clinical data
 - [ ] Add a Global Node control to start/approve an aggregation round and broadcast the resulting global model to local nodes
 - [ ] Show each local node receiving the new global model version and using it for the next prediction
@@ -77,6 +77,7 @@
 ## Changes made / Updates log
 
 - [x] Added Flower dependency and verified the Python package import/version output.
+- [x] Switched the active model to the real UCI Cleveland Heart Disease dataset and trained three FedAvg rounds.
 
 ## Note on scope conflict
 

@@ -9,7 +9,12 @@ export const api = {
     return { success: true };
   },
   getMe: async () => {
-    return { name: 'Nika Meyer', role: 'Researcher', email: 'name@example.com' };
+    return { name: 'Nika Meyer', role: 'Researcher', email: 'name@example.com', hospitalId: '0' };
+  },
+  getPresentationBatch: async () => {
+    const response = await fetch('http://localhost:5000/patients/presentation-batch', { credentials: 'include' });
+    if (!response.ok) throw new Error('Unable to load the presentation pool.');
+    return response.json();
   },
 
   // --- PATIENTS ---

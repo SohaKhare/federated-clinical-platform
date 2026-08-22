@@ -8,7 +8,7 @@ class ClinicalModel(nn.Module):
         self.network = nn.Sequential(
             nn.Linear(input_size, 32),
             nn.ReLU(),
-            nn.Linear(32, 3),
+            nn.Linear(32, 2),
         )
 
     def forward(self, features: torch.Tensor) -> torch.Tensor:

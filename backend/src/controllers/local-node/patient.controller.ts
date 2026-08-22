@@ -1,4 +1,7 @@
 import type { Request, Response } from "express";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 
 import {
   createPatient as createPatientRecord,
@@ -69,6 +72,45 @@ export async function getPatients(req: Request, res: Response) {
       message: "Unable to fetch patients.",
     });
   }
+}
+
+export async function getPresentationBatch(req: Request, res: Response) {
+  try {
+    const poolPath = path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      "../../../../federated/data/heart_presentation_pool.csv",
+    );
+    const lines = (await readFile(poolPath, "utf8")).trim().split("\n");
+    const headerLine = lines.shift();
+    if (!headerLine) {
+      throw new Error("Presentation pool is empty.");
+    }
+    const headers = headerLine.split(",");
+    const index = (name: string) => headers.indexOf(name);
+    const hospitalIndex = index("hospital_id");
+    const rows = lines.map((line) => line.split(","));
+    const hospitalId = Math.abs(hashUserId(getHospitalId(req))) % 3;
+    const available = rows.filter((row) => Number(row[hospitalIndex]) === hospitalId);
+    const batch = available.sort(() => Math.random() - 0.5).slice(0, 10 + Math.floor(Math.random() * 11));
+
+    return res.json({
+      hospital_id: hospitalId,
+      patients: batch.map((row) => ({
+        source_row: Number(row[index("_source_row")]),
+        age: Number(row[index("age")]),
+        sex: row[index("sex")],
+        symptoms: [row[index("cp")] === "4" ? "chest pain" : "clinical screening"],
+        heart_disease: Number(row[index("target")]) > 0,
+      })),
+    });
+  } catch (error) {
+    console.error("Presentation batch error:", error);
+    return res.status(500).json({ message: "Unable to load presentation patients." });
+  }
+}
+
+function hashUserId(value: string): number {
+  return [...value].reduce((hash, character) => ((hash << 5) - hash + character.charCodeAt(0)) | 0, 0);
 }
 
 export async function getPatientById(req: Request, res: Response) {
