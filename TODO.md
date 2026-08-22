@@ -23,20 +23,20 @@
 
 ## Phase 1 — Clinical Learning Model (core ML)
 
-- [ ] Dataset download + preprocessing script (pandas)
-- [ ] Feature engineering & train/eval splits per hospital partition
-- [ ] `ClinicalModel(nn.Module)` in PyTorch
+- [x] Dataset download + preprocessing script (pandas)
+- [x] Feature engineering & train/eval splits per hospital partition
+- [x] `ClinicalModel(nn.Module)` in PyTorch
 - [ ] Local train/eval loop with metrics (AUROC/F1/loss)
 
 ## Phase 2 — Federated Learning
 
-- [ ] Flower server (`federated/src/federated/server/`)
-- [ ] Hospital client (`fl.client.NumPyClient`) — 3 simulated nodes
-- [ ] Data partitioning across clients (non-IID to be realistic)
+- [x] Flower server (`federated/src/federated/server/`)
+- [x] Hospital client (`ClientApp`) — 3 simulated nodes
+- [x] Data partitioning across clients (hospital-based)
 
 ## Phase 3 — FedAvg Aggregation
 
-- [ ] FedAvg strategy wiring on server (`federated/src/federated/aggregation/`)
+- [x] FedAvg strategy wiring on server (`federated/src/federated/aggregation/`)
 - [ ] Round tracking + global loss/metrics logging across rounds
 - [ ] Persist round history (maps to `logs` schema)
 
