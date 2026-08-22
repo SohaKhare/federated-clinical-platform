@@ -1,4 +1,8 @@
-def main() -> None:
-    from federated.model.baseline import train_and_evaluate_baseline
+import flwr
 
-    train_and_evaluate_baseline()
+
+FLOWER_VERSION = flwr.__version__
+
+
+def main() -> None:
+    print(f"Flower imported successfully (version {FLOWER_VERSION})")

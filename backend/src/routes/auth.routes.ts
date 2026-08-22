@@ -6,6 +6,8 @@ import {
   getCurrentUser,
   logout,
 } from "../controllers/auth.controller.js";
+import { onboardUser } from "../controllers/onboarding.controller.js";
+import { requireAuth, requireRole } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
@@ -18,5 +20,7 @@ router.get("/google/:node/callback", googleCallback);
 router.get("/me", getCurrentUser);
 
 router.post("/logout", logout);
+
+router.post("/onboarding", requireAuth, requireRole("local"), onboardUser);
 
 export default router;

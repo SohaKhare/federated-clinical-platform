@@ -67,6 +67,8 @@ node_modules/
 out/
 .turbo/
 *.tsbuildinfo
+*.map
+*.d.ts
 
 # =========================
 # Frontend environment

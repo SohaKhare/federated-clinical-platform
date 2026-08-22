@@ -1,0 +1,124 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header {
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: var(--color-text-main);
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.chartBox {
+  background-color: var(--color-green-light);
+  border-radius: 20px;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.chartHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.badge {
+  background-color: var(--color-text-main);
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+}
+
+.chartTitle {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-main);
+}
+
+.chartContent {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.percentage {
+  font-size: 2.2rem;
+  font-weight: 500;
+  color: #fff;
+  display: flex;
+  align-items: baseline;
+  gap: 0.2rem;
+}
+
+.trend {
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.chartWrapper {
+  flex: 1;
+  height: 60px;
+}
+
+.darkBox {
+  background-color: var(--color-text-main);
+  border-radius: 20px;
+  padding: 1rem;
+}
+
+.darkHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.darkChart {
+  flex: 1;
+  height: 40px;
+}
+
+.darkContent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.darkLabel {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 0.2rem;
+}
+
+.badgePurp {
+  background-color: #d8c3e8;
+  color: var(--color-text-main);
+  font-size: 0.65rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 8px;
+  margin-bottom: 0.2rem;
+}
+
+.darkPercentage {
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: #fff;
+  display: flex;
+  align-items: baseline;
+  gap: 0.2rem;
+}

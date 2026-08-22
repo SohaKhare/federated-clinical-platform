@@ -7,12 +7,14 @@ declare module "express-session" {
     oauthNode?: UserRole;
 
     user?: {
+      userId: string;
       googleId: string;
       email: string;
-      name?: string;
+      hospitalName?: string;
       picture?: string;
       node: UserRole;
       role: UserRole;
+      onboarded: boolean;
     };
   }
 }

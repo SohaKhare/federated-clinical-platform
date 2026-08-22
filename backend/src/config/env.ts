@@ -19,6 +19,8 @@ export const env = {
 
   frontendUrl: process.env.FRONTEND_URL ?? "http://localhost:3000",
 
+  databaseUrl: requiredEnv("DATABASE_URL"),
+
   localGoogle: {
     clientId: requiredEnv("LOCAL_GOOGLE_CLIENT_ID"),
     clientSecret: requiredEnv("LOCAL_GOOGLE_CLIENT_SECRET"),

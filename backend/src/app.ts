@@ -4,6 +4,7 @@ import session from "express-session";
 import authRoutes from "./routes/auth.routes.js";
 import demoRoutes from "./routes/demo.routes.js";
 import { env } from "./config/env.js";
+import patientRoutes from "./routes/patient.routes.js";
 
 const app = express();
 
@@ -51,6 +52,8 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/auth", authRoutes);
+
+app.use("/patients", patientRoutes);
 
 app.use("/api", demoRoutes);
 
