@@ -1,2 +1,8 @@
+import flwr
+
+
+FLOWER_VERSION = flwr.__version__
+
+
 def main() -> None:
-    print("Hello from federated!")
+    print(f"Flower imported successfully (version {FLOWER_VERSION})")

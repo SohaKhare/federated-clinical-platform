@@ -73,6 +73,10 @@
 
 ---
 
+## Changes made / Updates log
+
+- [x] Added Flower dependency and verified the Python package import/version output.
+
 ## Note on scope conflict
 
 The older pitch document proposed NIH ChestX-ray14 + CheXpert (imaging/CNN federated diagnosis).
