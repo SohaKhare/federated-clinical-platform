@@ -1,5 +1,7 @@
 # Privacy-Preserving Federated Clinical Research Platform
 
+> **Living planning document:** This project is at an early stage. The architecture, scope, schemas, APIs, and roadmap may be changed as needed. Add, edit, or remove content when implementation, testing, or product decisions require it.
+
 ## 1. Project Overview
 
 This project is a **privacy-preserving federated clinical research platform** that allows hospitals across India to collaboratively learn from their treatment and clinical-outcome data without sharing patient records with a central server.

@@ -57,6 +57,13 @@
 - [ ] FastAPI or extend Express backend: `/federated/status`, `/hospital/summary` returning real data
 - [ ] Docker Compose: flower-server, hospital-a/b/c, backend, db, frontend
 - [ ] Frontend: replace starter template with hospital dashboard + federated server dashboard
+- [ ] Add a local-only presentation control to generate a random synthetic batch of patient records for the selected day
+- [ ] Clearly label generated records as demo/synthetic data and keep them separate from real clinical data
+- [ ] Add a Global Node control to start/approve an aggregation round and broadcast the resulting global model to local nodes
+- [ ] Show each local node receiving the new global model version and using it for the next prediction
+- [ ] Display model-version and weight/update-change information without exposing raw patient records or individual hospital updates
+- [ ] Add an analytics page showing local/global sample counts, participating nodes, round progress, update counts, model versions, and metric changes over time
+- [ ] Show how local model updates contribute to a new global model while preserving the Local/Global Node boundary
 
 ## Secondary (only after core demo works)
 
