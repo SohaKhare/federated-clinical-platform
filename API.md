@@ -130,5 +130,8 @@ At the time this document was written:
 
 - Backend scaffold, sessions, Google OAuth, and `local`/`global` role guards exist.
 - `/health` and two protected demo routes exist: `/api/federated/status` and `/api/hospital/summary`.
-- The endpoint catalog above is mostly planned and still needs implementation.
-- The Python federated package and database layer are not implemented yet.
+- Auth endpoints implemented: `POST /auth/logout`, `GET /auth/me`, plus `GET /auth/google`, `GET /auth/google/callback`, and a local-only onboarding route.
+- All Local patient endpoints implemented: `GET/POST /patients`, `PATCH/GET /patients/{id}`, `GET/POST /patients/{id}/{events}`.
+- Global Node endpoints implemented: `GET /nodes`, `GET /nodes/{id}`, `GET /nodes/{id}/status`, `GET /nodes/{id}/metrics`. Nodes are derived from onboarded local users; participation data comes from the logs table until real rounds exist.
+- Remaining Global, Local model/privacy/research, and Public Health/PDS endpoints are still planned.
+- The Python federated package exists only as scaffolded modules; no training/aggregation logic yet.
