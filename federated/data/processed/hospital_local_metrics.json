@@ -1,0 +1,163 @@
+{
+  "milestone": "Milestone 3: Simulated Hospital Partitioning & Local Training",
+  "partition_summary": {
+    "total_records_raw": 111,
+    "total_partitioned": 111,
+    "duplicate_records": 0,
+    "records_lost": 0,
+    "global_type1_count": 69,
+    "global_other_count": 42,
+    "global_type1_percentage": 62.16216216216216,
+    "hospitals": {
+      "apollo": {
+        "name": "APOLLO",
+        "total_samples": 37,
+        "type_1_count": 28,
+        "other_count": 9,
+        "type_1_percentage": 75.67567567567568
+      },
+      "kem": {
+        "name": "KEM",
+        "total_samples": 37,
+        "type_1_count": 23,
+        "other_count": 14,
+        "type_1_percentage": 62.16216216216216
+      },
+      "fortis": {
+        "name": "FORTIS",
+        "total_samples": 37,
+        "type_1_count": 18,
+        "other_count": 19,
+        "type_1_percentage": 48.64864864864865
+      }
+    }
+  },
+  "hospital_local_results": {
+    "apollo": {
+      "hospital_name": "Apollo",
+      "total_samples": 37,
+      "class_distribution": {
+        "type_1": 28,
+        "other": 9,
+        "type_1_percentage": 75.67567567567568
+      },
+      "train_samples": 29,
+      "test_samples": 8,
+      "train_breakdown": {
+        "type_1": 22,
+        "other": 7
+      },
+      "test_breakdown": {
+        "type_1": 6,
+        "other": 2
+      },
+      "training": {
+        "epochs": 100,
+        "batch_size": 8,
+        "initial_loss": 0.3344163082796952,
+        "final_loss": 0.00010692331877713702
+      },
+      "metrics": {
+        "accuracy": 0.875,
+        "precision": 1.0,
+        "recall": 0.8333333333333334,
+        "f1_score": 0.9090909090909091,
+        "roc_auc": 1.0,
+        "confusion_matrix": [
+          [
+            2,
+            0
+          ],
+          [
+            1,
+            5
+          ]
+        ]
+      }
+    },
+    "kem": {
+      "hospital_name": "Kem",
+      "total_samples": 37,
+      "class_distribution": {
+        "type_1": 23,
+        "other": 14,
+        "type_1_percentage": 62.16216216216216
+      },
+      "train_samples": 29,
+      "test_samples": 8,
+      "train_breakdown": {
+        "type_1": 18,
+        "other": 11
+      },
+      "test_breakdown": {
+        "type_1": 5,
+        "other": 3
+      },
+      "training": {
+        "epochs": 100,
+        "batch_size": 8,
+        "initial_loss": 0.5241783898452232,
+        "final_loss": 0.00019809016947843264
+      },
+      "metrics": {
+        "accuracy": 0.875,
+        "precision": 0.8333333333333334,
+        "recall": 1.0,
+        "f1_score": 0.9090909090909091,
+        "roc_auc": 1.0,
+        "confusion_matrix": [
+          [
+            2,
+            1
+          ],
+          [
+            0,
+            5
+          ]
+        ]
+      }
+    },
+    "fortis": {
+      "hospital_name": "Fortis",
+      "total_samples": 37,
+      "class_distribution": {
+        "type_1": 18,
+        "other": 19,
+        "type_1_percentage": 48.64864864864865
+      },
+      "train_samples": 29,
+      "test_samples": 8,
+      "train_breakdown": {
+        "type_1": 14,
+        "other": 15
+      },
+      "test_breakdown": {
+        "type_1": 4,
+        "other": 4
+      },
+      "training": {
+        "epochs": 100,
+        "batch_size": 8,
+        "initial_loss": 0.7151884950440506,
+        "final_loss": 0.0002153789632600443
+      },
+      "metrics": {
+        "accuracy": 0.875,
+        "precision": 0.8,
+        "recall": 1.0,
+        "f1_score": 0.8888888888888888,
+        "roc_auc": 1.0,
+        "confusion_matrix": [
+          [
+            3,
+            1
+          ],
+          [
+            0,
+            4
+          ]
+        ]
+      }
+    }
+  }
+}
