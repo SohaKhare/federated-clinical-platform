@@ -1,7 +1,7 @@
 // API client for the Federated Clinical Platform backend.
 // All endpoints below are implemented in the backend (see backend/testing_io.md).
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export class ApiError extends Error {
   status: number;
@@ -336,6 +336,8 @@ export const api = {
   // --- LOGS ---
   getLogs: async (params: { direction?: string; status?: string; round?: number; page?: number; pageSize?: number } = {}): Promise<LogsResponse> => {
     return fetcher<LogsResponse>(`/logs${qs(params)}`);
+  },
+
   // --- MODEL ---
   getModelInfo: async () => {
     return { version: 'clinical_model.pt', type: 'Flower FedAvg PyTorch MLP', parameters: 962 };
@@ -355,15 +357,8 @@ export const api = {
       body: JSON.stringify(input),
     });
   },
-  // --- FEDERATED ---
-  getFederatedStatus: async () => {
-    return fetcher('/federated/status', { method: 'GET' });
-  },
-  getFederatedRound: async () => {
-    const data = await fetcher('/api/federated/rounds', { method: 'GET' });
-    return data.rounds?.[0] ?? null;
-  },
 
+  // --- FEDERATED (global node) ---
   getGlobalRounds: async () => fetcher('/api/federated/rounds', { method: 'GET' }),
   startGlobalRound: async (targetNodeIds?: string[]) => fetcher('/api/federated/rounds/start', {
     method: 'POST',
@@ -374,7 +369,6 @@ export const api = {
     method: 'POST',
     body: JSON.stringify({ notes: 'Global Flower model broadcast to participating hospitals.' }),
   }),
-  getNodes: async () => fetcher('/nodes', { method: 'GET' }),
 
   // --- PRIVACY ---
   getPrivacyParameters: async (): Promise<PrivacyParameters> => {
