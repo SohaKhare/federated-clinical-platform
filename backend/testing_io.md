@@ -932,6 +932,30 @@ Purpose: Return the persisted status snapshot for a federated round.
 Expected response: `200` with round status, participating nodes, node phases,
 and progress counters. Unknown round IDs return `404`.
 
+### GET `/api/federated/rounds`
+
+Auth: Authenticated global user only.
+
+Purpose: List persisted federated round snapshots, newest round first.
+
+Expected response `200`:
+
+```json
+{
+  "rounds": [
+    {
+      "round_id": "round-uuid",
+      "round": 1,
+      "status": "starting",
+      "target_node_ids": ["local-user-uuid"],
+      "nodes": [],
+      "ready_nodes": 0,
+      "synced_nodes": 0
+    }
+  ]
+}
+```
+
 ### POST `/api/federated/rounds/:roundId/callback`
 
 Auth: ML service only, using the `X-Federation-Key` header. A browser session

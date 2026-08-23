@@ -157,7 +157,7 @@ The Global Node coordinates hospitals, rounds, aggregation, global model version
 | `GET` | `/federated/rounds` | List rounds with status, participants, and global metrics. |
 | `GET` | `/federated/rounds/{id}` | Return detailed status and results for one round. |
 | `POST` | `/federated/rounds/start` | Start a new federated round. |
-| `GET` | `/api/federated/rounds/{roundId}` | Return a persisted round snapshot for the Global UI. |
+| `GET` | `/api/federated/rounds` | List persisted federated round snapshots for the Global UI. |
 | `GET` | `/api/federated/rounds/{roundId}` | Return a persisted round snapshot for the Global UI. |
 | `POST` | `/federated/pull` | Request protocol/status synchronization; never pull patient data. |
 | `GET` | `/models` | List global model versions. |
@@ -205,7 +205,7 @@ federated (Flower)        --model params + metrics-->  backend (writes to `logs`
 
 - **Frontend → Backend** is live today. Cookie-based sessions (`credentials: include`), CORS restricted to origins in `CORS_ORIGINS`.
 - **Federated → Backend** is server-to-server, so browser CORS does not apply; the backend authenticates it with a shared secret header instead.
-- **Today**, the Python package runs standalone as an in-process Flower *simulation* (`run-federated`). There is no HTTP server in `federated/` yet — the endpoints below are the **planned bridge contract**, kept here so both sides build against the same shapes.
+- **Today**, the Python package runs standalone as an in-process Flower *simulation* (`run-federated`). There is no HTTP server in `federated/` yet — the ML bridge endpoints below remain a planned contract, kept here so both sides build against the same shapes.
 
 ### Planned bridge endpoints (Python side)
 

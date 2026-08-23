@@ -5,6 +5,7 @@ import {
   recordFederatedCallback,
   startFederatedRound,
   getFederatedRoundSnapshot,
+  getFederatedRoundSnapshots,
 } from "../../services/global-node-service/federation.service.js";
 import type {
   FederatedRoundBroadcastInput,
@@ -13,7 +14,7 @@ import type {
 } from "../../interfaces/model/federation-round.interface.js";
 
 const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function startFederatedRoundController(
   req: Request,
@@ -54,6 +55,21 @@ export async function getFederatedRoundController(
   }
 
   return res.json({ round });
+}
+
+export async function getFederatedRoundsController(
+  _req: Request,
+  res: Response,
+) {
+  try {
+    const rounds = await getFederatedRoundSnapshots();
+
+    return res.json({ rounds });
+  } catch (error) {
+    console.error("Federated rounds fetch error:", error);
+
+    return res.status(500).json({ message: "Unable to fetch federated rounds." });
+  }
 }
 
 export async function recordFederatedCallbackController(

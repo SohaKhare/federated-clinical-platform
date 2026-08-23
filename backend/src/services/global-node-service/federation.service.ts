@@ -100,9 +100,6 @@ export async function startFederatedRound(
     });
   }
 
-  roundStore.set(roundId, record);
-  await persistRound(record);
-
   await prisma.$transaction(
     selectedHospitals.map((hospital) =>
       prisma.log.upsert({
@@ -135,6 +132,12 @@ export async function startFederatedRound(
       }),
     ),
   );
+
+  // Only make the round visible/persisted once the per-hospital logs have
+  // actually been written, so a failed transaction can't leave an orphaned
+  // round record with no matching logs.
+  roundStore.set(roundId, record);
+  await persistRound(record);
 
   return {
     message: "Federated round started.",
@@ -314,6 +317,27 @@ export async function getFederatedRoundSnapshot(
   return persisted
     ? (persisted.snapshot as unknown as FederatedRoundSnapshot)
     : null;
+}
+
+export async function getFederatedRoundSnapshots(): Promise<
+  FederatedRoundSnapshot[]
+> {
+  const persistedRounds = await prisma.federatedRound.findMany({
+    orderBy: { round: "desc" },
+  });
+
+  const snapshots = new Map(
+    persistedRounds.map((round) => [
+      round.roundId,
+      round.snapshot as unknown as FederatedRoundSnapshot,
+    ]),
+  );
+
+  for (const record of roundStore.values()) {
+    snapshots.set(record.roundId, toSnapshot(record));
+  }
+
+  return [...snapshots.values()].sort((left, right) => right.round - left.round);
 }
 
 async function getRoundRecord(roundId: string): Promise<RoundRecord | null> {

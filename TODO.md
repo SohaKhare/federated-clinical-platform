@@ -56,11 +56,13 @@
 
 - [x] Database implementing `patients`/`logs` schema (Postgres, live on Supabase — `users`, `patients`, `patient_events`, `logs`)
 - [x] Express backend: local-node endpoints returning real data — patients CRUD/events (hospital-isolated), `GET /logs`, `GET /federated/status`, `GET /privacy/parameters`, `GET /research/summary`, `GET /research/insights`. `/api/hospital/summary` is still a static demo stub, not real data.
+- [x] Global federated round status endpoints: `GET /api/federated/rounds` and `GET /api/federated/rounds/:roundId`, backed by persisted round snapshots.
 - [ ] Docker Compose: flower-server, hospital-a/b/c, backend, db, frontend
 - [ ] Frontend: replace starter template with hospital dashboard + federated server dashboard
 - [x] Add a local-only presentation control using 10–20 held-out real patient rows for the selected day
 - [ ] Clearly label generated records as demo/synthetic data and keep them separate from real clinical data
 - [ ] Add a Global Node control to start/approve an aggregation round and broadcast the resulting global model to local nodes
+- [x] Add Global UI read endpoints for federated round status: `GET /api/federated/rounds` and `GET /api/federated/rounds/:roundId`
 - [ ] Show each local node receiving the new global model version and using it for the next prediction
 - [ ] Display model-version and weight/update-change information without exposing raw patient records or individual hospital updates
 - [ ] Add an analytics page showing local/global sample counts, participating nodes, round progress, update counts, model versions, and metric changes over time
