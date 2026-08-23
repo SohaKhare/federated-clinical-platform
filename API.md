@@ -121,8 +121,6 @@ A per-file failure produces a `draft: null` entry with an `error` string rather 
 | --- | --- | --- |
 | `GET` | `/federated/status` | Return local participation and training status. |
 | `POST` | `/federated/rounds/{roundId}/start-training` | Ask the local ML service to start a training run. |
-| `GET` | `/federated/round` | Return the current round, global model version, and local state. |
-| `POST` | `/federated/participate` | Confirm participation and begin the local training workflow when instructed. |
 | `GET` | `/privacy/status` | Show whether DP and Secure Aggregation are active locally. |
 | `GET` | `/privacy/parameters` | Return configured DP metadata such as epsilon, delta, clipping norm, and noise multiplier. |
 | `GET` | `/research/summary` | Return approved local clinical trends and outcome statistics. |
@@ -145,8 +143,10 @@ The Global Node coordinates hospitals, rounds, aggregation, global model version
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `GET` | `/nodes` | List registered hospitals and basic federation metadata. |
+| `GET` | `/nodes/health` | Paginated ping-style health check across every local node at once. |
 | `GET` | `/nodes/{id}` | Return a hospital's registration and participation history. |
 | `GET` | `/nodes/{id}/status` | Return a hospital's operational and federation status. |
+| `GET` | `/nodes/{id}/health` | Ping-style check: is this local node online (recent activity), and when was it last seen. |
 | `GET` | `/nodes/{id}/metrics` | Return non-sensitive participation, performance, and communication metrics. |
 
 ### Federation and Models
@@ -159,7 +159,6 @@ The Global Node coordinates hospitals, rounds, aggregation, global model version
 | `POST` | `/federated/rounds/start` | Start a new federated round. |
 | `GET` | `/api/federated/rounds` | List persisted federated round snapshots for the Global UI. |
 | `GET` | `/api/federated/rounds/{roundId}` | Return a persisted round snapshot for the Global UI. |
-| `POST` | `/federated/pull` | Request protocol/status synchronization; never pull patient data. |
 | `GET` | `/models` | List global model versions. |
 | `GET` | `/models/latest` | Return the active model's metadata and metrics. |
 | `GET` | `/models/{id}` | Return one global model version's metadata. |
@@ -179,15 +178,12 @@ The Global Node coordinates hospitals, rounds, aggregation, global model version
 | `GET` | `/heatmap` | Return aggregate regional health indicators. |
 | `GET` | `/heatmap/regions` | Return aggregate indicators for supported regions. |
 
-### Public Health and PDS
+### PDS
 
-These are secondary APIs and should be implemented after the federated clinical demo works.
+This is a secondary API and should be implemented after the federated clinical demo works.
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| `GET` | `/public-health/summary` | Return regional indicators, trends, and priority areas. |
-| `GET` | `/public-health/regions` | Return approved public-health information by region. |
-| `GET` | `/public-health/signals` | Return aggregate clinical, nutrition, community, and service signals. |
 | `GET` | `/pds/recommendations` | List regional PDS decision-support recommendations. |
 | `GET` | `/pds/recommendations/{region_id}` | Return one recommendation and its supporting indicators. |
 

@@ -60,3 +60,24 @@ export interface NodeMetrics {
   first_activity_at: string | null;
   last_activity_at: string | null;
 }
+
+export interface NodeHealth {
+  node_id: string;
+  hospital_name: string;
+  online: boolean;
+  last_seen_at: string | null;
+  checked_at: string;
+}
+
+export interface NodeHealthPagination {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface PaginatedNodeHealth {
+  checked_at: string;
+  nodes: NodeHealth[];
+  pagination: NodeHealthPagination;
+}

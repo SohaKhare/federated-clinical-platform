@@ -4,14 +4,17 @@ import type {
   NodeDetail,
   NodeFederationState,
   NodeGeolocation,
+  NodeHealth,
   NodeMetrics,
   NodeRoundParticipation,
   NodeStatus,
   NodeStatusInfo,
   NodeSummary,
+  PaginatedNodeHealth,
 } from "../../interfaces/model/node.interface.js";
 
 const ACTIVE_THRESHOLD_MS = 24 * 60 * 60 * 1000;
+const ONLINE_THRESHOLD_MS = 5 * 60 * 1000;
 
 interface HospitalUserRecord {
   userId: string;
@@ -143,6 +146,96 @@ export async function getNodeMetrics(
     exchanges_by_status: stats.byStatus,
     first_activity_at: stats.firstActivityAt ? toIso(stats.firstActivityAt) : null,
     last_activity_at: stats.lastActivityAt ? toIso(stats.lastActivityAt) : null,
+  };
+}
+
+/**
+ * Ping-style health check. There's no separate server deployed per hospital
+ * to actually ping — a "local node" is just a role-scoped user in this
+ * shared backend — so "online" is derived from how recently that node's
+ * logs table activity was, using a much tighter window than the general
+ * active/idle/registered status shown elsewhere.
+ */
+export async function getNodeHealth(nodeId: string): Promise<NodeHealth | null> {
+  const [user, latestLog] = await Promise.all([
+    findHospitalUser(nodeId),
+    prisma.log.findFirst({ where: { nodeId }, orderBy: { timestamp: "desc" } }),
+  ]);
+
+  if (!user) {
+    return null;
+  }
+
+  const lastSeenAt = latestLog?.timestamp ?? null;
+  const online =
+    lastSeenAt !== null && Date.now() - lastSeenAt.getTime() <= ONLINE_THRESHOLD_MS;
+
+  return {
+    node_id: user.userId,
+    hospital_name: user.hospitalName ?? "",
+    online,
+    last_seen_at: lastSeenAt ? toIso(lastSeenAt) : null,
+    checked_at: toIso(new Date()),
+  };
+}
+
+/**
+ * Same ping-style health check as getNodeHealth, but for every onboarded
+ * local node at once, paginated.
+ */
+export async function getNodesHealth(
+  page: number,
+  pageSize: number,
+): Promise<PaginatedNodeHealth> {
+  const where = { role: "local", hospitalName: { not: null } } as const;
+
+  const [total, users] = await Promise.all([
+    prisma.user.count({ where }),
+    prisma.user.findMany({
+      where,
+      orderBy: { hospitalName: "asc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
+
+  const logGroups = users.length
+    ? await prisma.log.groupBy({
+        by: ["nodeId"],
+        where: { nodeId: { in: users.map((user) => user.userId) } },
+        _max: { timestamp: true },
+      })
+    : [];
+
+  const lastSeenByNode = new Map(
+    logGroups.map((group) => [group.nodeId, group._max.timestamp]),
+  );
+
+  const now = Date.now();
+  const checkedAt = new Date(now);
+
+  const nodes: NodeHealth[] = users.map((user) => {
+    const lastSeenAt = lastSeenByNode.get(user.userId) ?? null;
+    const online = lastSeenAt !== null && now - lastSeenAt.getTime() <= ONLINE_THRESHOLD_MS;
+
+    return {
+      node_id: user.userId,
+      hospital_name: user.hospitalName ?? "",
+      online,
+      last_seen_at: lastSeenAt ? toIso(lastSeenAt) : null,
+      checked_at: toIso(checkedAt),
+    };
+  });
+
+  return {
+    checked_at: toIso(checkedAt),
+    nodes,
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages: Math.ceil(total / pageSize) || 0,
+    },
   };
 }
 

@@ -857,6 +857,85 @@ Expected response `200` (real captured output — same shape and data as
 }
 ```
 
+### GET `/nodes/health`
+
+Purpose: Same ping-style check as `/nodes/:id/health`, but for every
+onboarded local node at once, paginated. Registered before `/nodes/:id` in
+the router so the literal path `/health` never gets swallowed by the `:id`
+wildcard.
+
+Query params (all optional):
+
+- `page` — positive integer, default `1`
+- `pageSize` — positive integer, default `20`, max `200`
+
+Expected response `200` (real captured output, `pageSize=2`):
+
+```json
+{
+  "checked_at": "2026-08-23T05:37:49.001Z",
+  "nodes": [
+    {
+      "node_id": "1bb53b66-de9d-432b-8851-9cedd26f1ea9",
+      "hospital_name": "AIIMS Delhi",
+      "online": false,
+      "last_seen_at": null,
+      "checked_at": "2026-08-23T05:37:49.001Z"
+    },
+    {
+      "node_id": "def06c04-466e-4a35-87ef-eacb9b4c275c",
+      "hospital_name": "Demo General Hospital",
+      "online": false,
+      "last_seen_at": null,
+      "checked_at": "2026-08-23T05:37:49.001Z"
+    }
+  ],
+  "pagination": { "page": 1, "pageSize": 2, "total": 6, "totalPages": 3 }
+}
+```
+
+Nodes are ordered alphabetically by `hospital_name`. `pagination.total`/
+`totalPages` reflect the full onboarded-node count, not just the current
+page. Invalid `page`/`pageSize` → `400` (same message shape as `GET
+/logs`'s query validation).
+
+### GET `/nodes/:id/health`
+
+Purpose: Ping-style health check for one local node. There's no separate
+server deployed per hospital to literally ping — a "local node" is a
+role-scoped user in this shared backend — so `online` is derived from how
+recently that node had any log activity, using a **5-minute** window (much
+tighter than the 24-hour window `status`/`active` uses elsewhere).
+
+Expected response `200` (real captured output, node with no recent
+activity):
+
+```json
+{
+  "node_id": "92408405-7871-4d5d-9bc6-3a9aa45dea82",
+  "hospital_name": "Health Hospital A",
+  "online": false,
+  "last_seen_at": null,
+  "checked_at": "2026-08-23T05:18:00.917Z"
+}
+```
+
+Immediately after a fresh log row lands for that node (real captured
+output):
+
+```json
+{
+  "node_id": "92408405-7871-4d5d-9bc6-3a9aa45dea82",
+  "hospital_name": "Health Hospital A",
+  "online": true,
+  "last_seen_at": "2026-08-23T05:18:00.922Z",
+  "checked_at": "2026-08-23T05:18:01.027Z"
+}
+```
+
+`400` for a malformed node ID, `404` for a well-formed but unknown/not-yet-
+onboarded one (both real captured output).
+
 ### GET `/nodes/:id/metrics`
 
 Expected response `200` (real captured output):
@@ -999,14 +1078,15 @@ Express backend:
 
 ### Federated and privacy APIs
 
-- `POST /api/federated/rounds/start` — starts a federated round from the
-  global node side and fans out a fire-and-forget request.
-- `POST /api/federated/rounds/:roundId/broadcast` — broadcasts aggregated
-  weights from the global side after enough updates are received.
 - `GET /privacy/status` — nothing yet configures whether DP/SecAgg are
   meant to be on, so there's nothing honest to report here (distinct from
   `GET /privacy/parameters`, which is implemented and reports real numbers
   once available).
+
+Note: `POST /api/federated/rounds/start` and
+`POST /api/federated/rounds/:roundId/broadcast` are implemented and
+verified — see the "Federation and ML bridge" section above, not listed
+here anymore.
 
 ### Research and operations APIs
 
