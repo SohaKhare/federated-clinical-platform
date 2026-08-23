@@ -36,7 +36,7 @@ export async function getLogs(req: Request, res: Response) {
   }
 }
 
-function parseLogFilters(query: Request["query"]): LogFilters | null {
+export function parseLogFilters(query: Request["query"]): LogFilters | null {
   const { direction, status, round, page, pageSize } = query;
 
   if (

@@ -613,9 +613,12 @@ Auth: Authenticated local user only.
 
 ### GET `/logs`
 
-Purpose: Return this hospital's own federated-round activity log
-(`node_id` is always the caller's own `userId` — one hospital never sees
-another's logs).
+Purpose: Role-aware — the same path behaves differently depending on the
+caller. A `local` account gets this section's original behavior: its own
+hospital's federated-round activity log (`node_id` is always the caller's
+own `userId` — one hospital never sees another's logs, unchanged). A
+`global` account instead gets every node's logs at once — see "GET `/logs`
+(global)" below for that shape.
 
 Query params (all optional):
 
@@ -686,6 +689,124 @@ Invalid query response `400` (real captured output, `?pageSize=99999`):
 Note: the new federation round endpoints write round lifecycle rows into the
 `logs` table, but until a federated round is started this will still return
 `{"logs": [], "pagination": {"page":1,"pageSize":20,"total":0,"totalPages":0}}`.
+
+### GET `/logs` (global)
+
+Auth: Authenticated global user only. Same path and query params as the
+local view above (`direction`, `status`, `round`, `page`, `pageSize`), but
+with no per-hospital scoping at all — every node's log rows, newest round
+first.
+
+Expected response `200` (real captured output, mixing a freshly-seeded row
+from one test hospital with the pre-existing "AIIMS Delhi" demo history —
+`node_id` varies across rows, unlike the local view):
+
+```json
+{
+  "logs": [
+    {
+      "log_id": "9a9c84c5-689e-4001-a2e6-223d59545e84",
+      "node_id": "6ef414e9-3a43-4362-8b65-94782fae7da8",
+      "timestamp": "2026-08-23T07:53:57.505Z",
+      "direction": "outgoing",
+      "round": 701,
+      "metadata": {},
+      "status": "preparing",
+      "created_at": "2026-08-23T07:53:57.505Z"
+    },
+    {
+      "log_id": "e1c25641-42ce-4dbb-a3be-0e6e8cf503ca",
+      "node_id": "754d6124-0e06-4a5c-9f47-2e16bda13ae9",
+      "timestamp": "2026-08-23T07:53:57.294Z",
+      "direction": "outgoing",
+      "round": 700,
+      "metadata": { "num_examples": 210 },
+      "status": "confirmed",
+      "created_at": "2026-08-23T07:53:57.294Z"
+    },
+    {
+      "log_id": "30000000-0000-4000-8000-000000000007",
+      "node_id": "1bb53b66-de9d-432b-8851-9cedd26f1ea9",
+      "timestamp": "2026-08-22T06:35:44.350Z",
+      "direction": "incoming",
+      "round": 4,
+      "metadata": { "message": "Global model successfully synchronized", "global_round": 4, "model_version": "global-v4", "participating_nodes": 5 },
+      "status": "synced",
+      "created_at": "2026-08-22T06:35:44.350Z"
+    }
+  ],
+  "pagination": { "page": 1, "pageSize": 20, "total": 9, "totalPages": 1 }
+}
+```
+
+A `local` account still hits the `/logs` section above, not this one — the
+route dispatches on `req.session.user.role`, not a different path.
+
+### GET `/logs/:nodeId`
+
+Auth: Authenticated global user only (`403` for a `local` caller — real
+captured output: `{"message":"Access denied. Requires role: global.","yourRole":"local"}`).
+
+Purpose: One specific hospital's logs — same query params as above, scoped
+to the `nodeId` in the URL instead of the caller.
+
+Expected response `200` (real captured output):
+
+```json
+{
+  "logs": [
+    {
+      "log_id": "9a9c84c5-689e-4001-a2e6-223d59545e84",
+      "node_id": "6ef414e9-3a43-4362-8b65-94782fae7da8",
+      "timestamp": "2026-08-23T07:53:57.505Z",
+      "direction": "outgoing",
+      "round": 701,
+      "metadata": {},
+      "status": "preparing",
+      "created_at": "2026-08-23T07:53:57.505Z"
+    }
+  ],
+  "pagination": { "page": 1, "pageSize": 20, "total": 1, "totalPages": 1 }
+}
+```
+
+`400` for a malformed node id; `404` for a well-formed but unregistered one
+(real captured output: `{"message":"Node not found."}`). Unlike the local
+node's own `GET /logs`, this view has **no** empty-account demo fallback —
+a node with zero logs correctly returns an empty list here, not another
+hospital's data.
+
+### GET `/logs/round/:roundId`
+
+Auth: Authenticated global user only (`403` for `local`, same shape as
+above).
+
+Purpose: Every log row written during one federated round, across all its
+participating nodes. Resolves `roundId` (the `federated_rounds.round_id`
+uuid) to the numeric `logs.round` it corresponds to, then filters on that.
+
+Expected response `200` (real captured output):
+
+```json
+{
+  "logs": [
+    {
+      "log_id": "e1c25641-42ce-4dbb-a3be-0e6e8cf503ca",
+      "node_id": "754d6124-0e06-4a5c-9f47-2e16bda13ae9",
+      "timestamp": "2026-08-23T07:53:57.294Z",
+      "direction": "outgoing",
+      "round": 700,
+      "metadata": { "num_examples": 210 },
+      "status": "confirmed",
+      "created_at": "2026-08-23T07:53:57.294Z"
+    }
+  ],
+  "pagination": { "page": 1, "pageSize": 20, "total": 1, "totalPages": 1 }
+}
+```
+
+`400` for a malformed round id; `404` for a well-formed but unknown one
+(real captured output: `{"message":"Round not found."}`).
 
 ### GET `/federated/status`
 

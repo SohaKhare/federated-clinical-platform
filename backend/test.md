@@ -3,11 +3,38 @@
 **Date:** 2026-08-23
 **Scope:** `federated-clinical-platform/backend`
 **Accounts under test:** 2x `local` role (hospital/clinic nodes) + 1x `global` role (federated server node)
-**Status: 53/53 checks pass** (43 from the first two passes + 10 from the pass below, plus a live Gemini OCR extraction).
+**Status: 62/62 checks pass** (43 from the first two passes + 10 from Pass 3, plus a live Gemini OCR extraction, plus 8 from Pass 4 below).
 
 ## Summary
 
-First pass found auth/RBAC/data-isolation solid, but the global-node federated-round lifecycle (`/api/federated/rounds/*`) was broken end-to-end by two bugs — one in application code, one in database drift. Both are fixed and re-verified. A later pass covers the remaining patient endpoints (events/PATCH/presentation-batch) and the new Gemini-backed report OCR feature, plus the two new node-health endpoints added since. Everything in scope now passes.
+First pass found auth/RBAC/data-isolation solid, but the global-node federated-round lifecycle (`/api/federated/rounds/*`) was broken end-to-end by two bugs — one in application code, one in database drift. Both are fixed and re-verified. A later pass covers the remaining patient endpoints (events/PATCH/presentation-batch) and the new Gemini-backed report OCR feature, plus the two new node-health endpoints added since. A separate live run (outside this file's numbered passes) also proved the real Flower ML pipeline works end to end: round start → auto ML trigger → real 3-round FedAvg training → real callback → DB updated to `received`. A teammate's later commit briefly broke the real `/patients` API in favor of an unauthenticated mock — found, live-confirmed, and fixed. Everything in scope now passes.
+
+## Session findings: teammate regression, redundant code, real ML pipeline verified live
+
+A teammate's commit ("thik kar diya") landed mid-session and was audited before continuing:
+
+- **Confirmed broken, then fixed:** `patient.routes.ts` — everything verified in Pass 3 (CRUD, events, OCR, presentation-batch) — was imported in `app.ts` but never mounted, so the real `/patients` API was unreachable (`404`). In its place, `/api/patients` served 5 hardcoded fake patients with **no auth at all** — confirmed live with a request carrying no session cookie, got `200` and fake data. Checked the frontend (`lib/api.ts` and every patient component): it calls `/patients`, never `/api/patients` — so the mock endpoint was dead code serving nobody, while the thing it broke was exactly what the live UI needed. **Fixed**: restored the `/patients` mount in `app.ts`, deleted the orphaned mock stub (`routes/patients.routes.ts`, `controllers/patients.controller.ts`) — re-verified live: anonymous request now correctly `401`s, and a real session gets real DB-backed data. Also seeded 6 realistic patients (via the real `createPatient` service, proper `patient_created` events included) onto the shared `demo@example.com` account, which had 0 patients despite being the most likely account handed to a frontend dev — confirmed `GET /patients` now returns all 6. (Separately, two other real hospital accounts — "AIIMS Delhi" and "Soha" — already had 13 and 14 real patients respectively, now visible again too.)
+- **Confirmed and fixed — cross-hospital data leak.** `getNodeStatus`/`getLogs`/`getPrivacyParameters` had a fallback that silently substituted a different node's data (`"aiims-delhi-node-01"` / `"HOSP_A"`, neither a real user id) whenever the caller's own hospital had zero logs. Proved it live: a brand-new hospital with no logs of its own could see another node's log rows through `GET /logs`. Fixed by pointing the fallback at the real "AIIMS Delhi" account's actual UUID and reassigning the 7 orphaned demo log rows in the DB to that real account — re-verified live, fallback now resolves to real backing data.
+- **Redundant code removed:** a duplicate `app.use("/api", demoRoutes)` mount in `app.ts`; two empty leftover directories (`routes/global-node-routes/`, `routes/local-node-routes/`); a dead, never-referenced `payload` variable in `federated/src/federated/server_app.py` (the actual request body was always built fresh inline in the send loop — confirmed via the real captured callback payload below, which matches the inline body, not the removed variable's shape).
+- **Real ML pipeline verified live, end to end** (not simulated): installed the Python deps (`uv sync`), started the real `federated-service` HTTP bridge (`federated/src/federated/service.py`, matches `FEDERATED_URL` exactly), then drove the actual flow through the running backend — `POST /api/federated/rounds/start` → automatic fan-out trigger (`startFederatedTraining`, sends one request covering every targeted node) → real 3-round FedAvg training via Flower on the real UCI heart-disease dataset (100% train accuracy, ~90% eval accuracy, ~15 seconds) → real callback POST from Python back to `POST /api/federated/rounds/:roundId/callback` with the correct `X-Federation-Key` → DB round/log rows correctly updated to `received`. Also noted: the model always trains on a static, pre-partitioned CSV (`heart_disease_cleveland.csv`), not on real hospital-submitted `patients` table data — the `node_ids` passed through the API only address the callback, they don't select training data.
+- **Found and noted (not fixed):** the original single-node local trigger (`POST /federated/rounds/:roundId/start-training` → `startLocalTraining`) sends `node_id` (singular) but the real Python service requires `node_ids` (plural array) — so calling that endpoint against the real bridge today would get rejected with `400`. It's now incompatible with the real service; the new automatic fan-out (`startFederatedTraining`) is the only path that actually works against it.
+
+## Pass 4 — Role-based `/logs` split: global-wide, per-node, per-round (8/8)
+
+`GET /logs` now dispatches by role at the route layer instead of being local-only: a `local` account still sees only its own logs (unchanged), while a `global` account sees every node's logs at once. Two new global-only endpoints were added alongside it: `GET /logs/:nodeId` (one hospital's logs) and `GET /logs/round/:roundId` (every log row from one federated round, across all its participating nodes — resolves the round's UUID to the numeric `logs.round` it maps to).
+
+| # | Check | Result |
+|---|---|---|
+| 1 | local `GET /logs` still returns only its own hospital's logs (unchanged behavior) | PASS |
+| 2 | global `GET /logs` returns every node's logs at once (global-wide view) | PASS |
+| 3 | global `GET /logs/:nodeId` returns only that one hospital's logs | PASS |
+| 4 | global `GET /logs/:nodeId` with an unknown UUID → `404` | PASS |
+| 5 | local `GET /logs/:nodeId` → `403` (global-only) | PASS |
+| 6 | global `GET /logs/round/:roundId` returns only that round's logs (resolved via `federated_rounds.round_id` → `logs.round`) | PASS |
+| 7 | global `GET /logs/round/:roundId` with an unknown round → `404` | PASS |
+| 8 | local `GET /logs/round/:roundId` → `403` (global-only) | PASS |
+
+Real captured output for the global-wide view (check #2) also surfaced the pre-existing demo log rows correctly attributed to the real "AIIMS Delhi" account after last session's fallback-ID fix — confirming that fix is holding.
 
 ## Pass 3 — Patient events/PATCH/presentation-batch + report OCR (10/10, plus 1 live OCR extraction)
 
