@@ -18,7 +18,7 @@ export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { user, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
 
   const filteredRoutes = searchableRoutes.filter(route => {
     const term = query.toLowerCase();
@@ -94,10 +94,12 @@ export default function Header() {
       
       <div className={styles.actions}>
         <div className={styles.profileInfo}>
-          <span className={styles.userName}>{user?.name ?? '…'}</span>
+          <span className={styles.userName}>
+            {loading ? '…' : user ? user.hospitalName ?? user.email : 'Guest'}
+          </span>
           {user?.picture ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={user.picture} alt={user.name} className={styles.avatar} referrerPolicy="no-referrer" />
+            <img src={user.picture} alt={user?.email ?? 'avatar'} className={styles.avatar} referrerPolicy="no-referrer" />
           ) : (
             <div className={styles.avatar}>
               <LogOut size={16} color="#fff" />

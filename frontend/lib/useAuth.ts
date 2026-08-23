@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, type AuthUser } from './api';
 
@@ -8,34 +8,38 @@ export function useAuth(redirectToLogin = false) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    api.getMe()
+  const load = useCallback(() => {
+    return api.getMe()
       .then((u) => {
-        if (!cancelled) setUser(u);
+        setUser(u);
+        if (!u && redirectToLogin) router.replace('/login');
+        return u;
       })
       .catch(() => {
-        if (!cancelled && redirectToLogin) {
-          router.replace('/login');
-        }
+        setUser(null);
+        if (redirectToLogin) router.replace('/login');
+        return null;
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      .finally(() => setLoading(false));
+  }, [redirectToLogin, router]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!cancelled) load();
     return () => {
       cancelled = true;
     };
-  }, [redirectToLogin, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const logout = async () => {
     try {
       await api.logout();
     } finally {
+      setUser(null);
       router.replace('/login');
     }
   };
 
-  return { user, loading, logout };
+  return { user, loading, logout, refresh: load };
 }

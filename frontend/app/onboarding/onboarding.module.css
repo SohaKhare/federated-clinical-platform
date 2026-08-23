@@ -1,0 +1,14 @@
+.geoRow {
+  display: flex;
+  gap: 0.8rem;
+}
+
+.geoRow > div {
+  flex: 1;
+}
+
+.error {
+  color: #d7191c;
+  font-size: 0.85rem;
+  margin: 0;
+}

@@ -2,10 +2,21 @@
 import styles from './Sidebar.module.css';
 import { Shield, Home, Map, FileText, Settings, Key, User, Moon, LogOut } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
+import { api } from '@/lib/api';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await api.logout();
+    } finally {
+      router.replace('/login');
+    }
+  };
 
   return (
     <aside className={styles.sidebar}>
@@ -35,9 +46,9 @@ export default function Sidebar() {
         <div className={styles.userProfile}>
           <User size={20} />
         </div>
-        <Link href="/login" className={styles.uploadIcon} title="Logout">
+        <button type="button" onClick={handleLogout} className={styles.uploadIcon} title="Logout">
           <LogOut size={16} />
-        </Link>
+        </button>
       </div>
     </aside>
   );

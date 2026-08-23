@@ -1,95 +1,392 @@
-// Mock API Service for Local Node Endpoints
+// API client for the Federated Clinical Platform backend.
+// All endpoints below are implemented in the backend (see backend/testing_io.md).
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-async function fetcher(endpoint: string, options: RequestInit = {}) {
+export class ApiError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
+async function fetcher<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_URL}${endpoint}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
       ...options.headers,
     },
     credentials: 'include',
   });
 
-  if (!res.ok) {
-    throw new Error(await res.text() || 'An error occurred');
+  let body: unknown = null;
+  const text = await res.text();
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch {
+      body = text;
+    }
   }
-  return res.json();
+
+  if (!res.ok) {
+    const message =
+      (body && typeof body === 'object' && 'message' in body && typeof (body as { message: unknown }).message === 'string'
+        ? (body as { message: string }).message
+        : null) ?? `Request failed with status ${res.status}`;
+    throw new ApiError(res.status, message);
+  }
+
+  return body as T;
 }
 
-export interface AuthUser {
-  id: string;
-  email: string;
-  name: string;
-  picture?: string;
-  role: 'local' | 'global';
+function qs(params: Record<string, string | number | undefined>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== '') search.set(key, String(value));
+  }
+  const s = search.toString();
+  return s ? `?${s}` : '';
 }
+
+// ---------- Types ----------
+
+export type UserRole = 'local' | 'global';
+
+export interface AuthUser {
+  userId: string;
+  googleId: string;
+  email: string;
+  hospitalName?: string;
+  picture?: string;
+  node: UserRole;
+  role: UserRole;
+  onboarded: boolean;
+}
+
+export interface Geolocation {
+  latitude: number;
+  longitude: number;
+}
+
+export interface HealthConditions {
+  bp?: string;
+  sugar?: string;
+  allergies?: string[];
+  [key: string]: unknown;
+}
+
+export interface Patient {
+  patient_id: string;
+  name: string;
+  age: number;
+  sex: string;
+  symptoms: string[];
+  diagnosed_diseases: string[];
+  health_conditions: HealthConditions;
+  contributed_to_round: number | null;
+  updated_at: string;
+  created_at: string;
+}
+
+export interface NewPatientInput {
+  name: string;
+  age: number;
+  sex: string;
+  symptoms: string[];
+  diagnosed_diseases: string[];
+  health_conditions: HealthConditions;
+}
+
+export interface PatientUpdateInput {
+  name?: string;
+  age?: number;
+  sex?: string;
+  symptoms?: string[];
+  diagnosed_diseases?: string[];
+  health_conditions?: HealthConditions;
+}
+
+export type ClinicalEventType = 'treatment' | 'diagnosis' | 'observation' | string;
+
+export interface PatientEvent {
+  event_id: string;
+  patient_id: string;
+  event_type: ClinicalEventType;
+  event_data: Record<string, unknown>;
+  occurred_at: string;
+  created_at: string;
+}
+
+export interface AddEventInput {
+  eventType: ClinicalEventType;
+  eventData: Record<string, unknown>;
+  occurredAt?: string;
+}
+
+export interface LogMetadata {
+  num_examples?: number;
+  metrics?: {
+    epsilon?: number;
+    delta?: number;
+    clipping_norm?: number;
+    noise_multiplier?: number;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+export interface LogEntry {
+  log_id: string;
+  node_id: string;
+  timestamp: string;
+  direction: 'outgoing' | 'incoming';
+  round: number;
+  metadata: LogMetadata;
+  status: 'pending' | 'confirmed' | 'failed';
+  created_at: string;
+}
+
+export interface LogsResponse {
+  logs: LogEntry[];
+  pagination: { page: number; pageSize: number; total: number; totalPages: number };
+}
+
+export interface FederationState {
+  latest_round_seen: number;
+  last_direction: 'outgoing' | 'incoming';
+  last_status: 'pending' | 'confirmed' | 'failed';
+}
+
+export interface NodeStatus {
+  node_id: string;
+  hospital_name: string;
+  status: 'registered' | 'active' | 'idle';
+  federation_state: FederationState;
+  last_activity_at: string | null;
+}
+
+export interface PrivacyParameters {
+  dp_enabled: boolean;
+  epsilon: number | null;
+  delta: number | null;
+  clipping_norm: number | null;
+  noise_multiplier: number | null;
+  as_of_round: number | null;
+}
+
+export interface ResearchSummary {
+  total_patients: number;
+  age: { average: number; min: number; max: number };
+  sex_breakdown: Record<string, number>;
+  top_diagnosed_diseases: Array<{ diagnosis: string; count: number }>;
+  top_symptoms: Array<{ symptom: string; count: number }>;
+  min_group_size: number;
+}
+
+export interface ResearchInsightAssociation {
+  diagnosis: string;
+  patient_count: number;
+  common_symptoms: Array<{ symptom: string; count: number }>;
+}
+
+export interface ResearchInsights {
+  associations: ResearchInsightAssociation[];
+  min_group_size: number;
+  note: string;
+}
+
+export interface FederatedNode {
+  node_id: string;
+  hospital_name: string;
+  pincode: string;
+  geolocation: Geolocation;
+  contact_email: string;
+  joined_at: string;
+  last_activity_at: string | null;
+  status: 'registered' | 'active' | 'idle';
+}
+
+export interface ParticipationRound {
+  round: number;
+  directions: string[];
+  statuses: string[];
+  exchanges: number;
+  last_activity_at: string;
+}
+
+export interface NodeDetails extends Omit<FederatedNode, 'last_activity_at'> {
+  updated_at?: string;
+  last_activity_at?: string | null;
+  participation_history: ParticipationRound[];
+}
+
+export interface NodeMetrics {
+  node_id: string;
+  hospital_name: string;
+  total_exchanges: number;
+  rounds_participated: number;
+  exchanges_by_status: Record<string, number>;
+  first_activity_at: string | null;
+  last_activity_at: string | null;
+}
+
+export interface FederatedRoundSnapshot {
+  round_id: string;
+  round: number;
+  status: string;
+  target_node_ids: string[];
+  nodes: unknown[];
+  ready_nodes: number;
+  synced_nodes: number;
+}
+
+// ---------- API ----------
 
 export const api = {
   // --- AUTH ---
   loginWithGoogle: () => {
+    // Full-page navigation to the backend OAuth entry point (cross-origin by design).
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = `${API_URL}/auth/google`;
   },
+
   logout: async () => {
-    return fetcher('/auth/logout', { method: 'POST' });
+    return fetcher<{ message?: string }>('/auth/logout', { method: 'POST' });
   },
-  getMe: async (): Promise<AuthUser> => {
-    const data = await fetcher('/auth/me');
+
+  /** Returns the session user, or null when not authenticated (401). */
+  getMe: async (): Promise<AuthUser | null> => {
+    try {
+      const data = await fetcher<{ authenticated: boolean; user: AuthUser }>('/auth/me');
+      return data.authenticated ? data.user : null;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) return null;
+      throw error;
+    }
+  },
+
+  onboard: async (input: { hospitalName: string; pincode: string; geolocation: Geolocation }) => {
+    const data = await fetcher<{ user: AuthUser }>('/auth/onboarding', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
     return data.user;
-  },
-  getPresentationBatch: async () => {
-    const response = await fetch(`${API_URL}/patients/presentation-batch`, { credentials: 'include' });
-    if (!response.ok) throw new Error('Unable to load the presentation pool.');
-    return response.json();
   },
 
   // --- PATIENTS ---
-  getPatients: async () => {
-    return fetcher('/api/patients', { method: 'GET' });
-  },
-  getPatientDetails: async (id: string) => {
-    return { id, name: `Patient ${id}`, dob: '1980-01-01', conditions: ['Hypertension'] };
-  },
-  getPatientEvents: async (id: string) => {
-    return [
-      { date: '2026-08-22', type: 'Checkup', details: 'Regular screening' },
-      { date: '2026-07-15', type: 'Lab', details: 'Bloodwork normal' }
-    ];
+  getPatients: async (): Promise<Patient[]> => {
+    const data = await fetcher<{ patients: Patient[] }>('/patients');
+    return data.patients;
   },
 
-  // --- MODEL ---
-  getModelInfo: async () => {
-    return { version: 'v2.1.4', type: 'Federated XGBoost', parameters: 1450000 };
-  },
-  getModelMetrics: async () => {
-    return { accuracy: 0.94, precision: 0.92, recall: 0.95, f1: 0.93 };
+  getPatient: async (id: string): Promise<Patient> => {
+    const data = await fetcher<{ patient: Patient }>(`/patients/${id}`);
+    return data.patient;
   },
 
-  // --- FEDERATED ---
-  getFederatedStatus: async () => {
-    return { status: 'Training', connectedNodes: 12, uptime: '48h' };
+  createPatient: async (input: NewPatientInput): Promise<Patient> => {
+    const data = await fetcher<{ patient: Patient }>('/patients', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    return data.patient;
   },
-  getFederatedRound: async () => {
-    return { currentRound: 42, totalRounds: 100, progress: 0.42 };
+
+  updatePatient: async (id: string, input: PatientUpdateInput): Promise<Patient> => {
+    const data = await fetcher<{ patient: Patient }>(`/patients/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    });
+    return data.patient;
+  },
+
+  getPatientEvents: async (id: string): Promise<PatientEvent[]> => {
+    const data = await fetcher<{ events: PatientEvent[] }>(`/patients/${id}/events`);
+    return data.events;
+  },
+
+  addPatientEvent: async (id: string, input: AddEventInput): Promise<PatientEvent> => {
+    const data = await fetcher<{ event: PatientEvent }>(`/patients/${id}/events`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    return data.event;
+  },
+
+  getPresentationBatch: async (): Promise<{
+    hospital_id: number;
+    patients: Array<{
+      source_row: number;
+      age: number;
+      sex: string;
+      symptoms: string[];
+      heart_disease: boolean;
+    }>;
+  }> => {
+    return fetcher('/patients/presentation-batch');
+  },
+
+  // --- LOGS ---
+  getLogs: async (params: { direction?: string; status?: string; round?: number; page?: number; pageSize?: number } = {}): Promise<LogsResponse> => {
+    return fetcher<LogsResponse>(`/logs${qs(params)}`);
+  },
+
+  // --- FEDERATED (local node) ---
+  getFederatedStatus: async (): Promise<NodeStatus> => {
+    return fetcher<NodeStatus>('/federated/status');
+  },
+
+  startTraining: async (roundId: string, input: { round: number; config?: Record<string, unknown> }) => {
+    return fetcher<unknown>(`/federated/rounds/${roundId}/start-training`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
   },
 
   // --- PRIVACY ---
-  getPrivacyStatus: async () => {
-    return { mode: 'Differential Privacy', active: true };
-  },
-  getPrivacyBudget: async () => {
-    return { epsilon: 1.5, remaining: 0.8, used: 0.7 };
+  getPrivacyParameters: async (): Promise<PrivacyParameters> => {
+    return fetcher<PrivacyParameters>('/privacy/parameters');
   },
 
   // --- RESEARCH ---
-  getResearchSummary: async () => {
-    return { totalStudies: 4, activeTrials: 2, totalParticipants: 1204 };
+  getResearchSummary: async (): Promise<ResearchSummary> => {
+    return fetcher<ResearchSummary>('/research/summary');
   },
-  getResearchInsights: async () => {
-    return [
-      { title: 'Treatment A Efficacy', description: 'Shows 20% improvement in recovery.' },
-      { title: 'Risk Factor Correlation', description: 'Strong link identified in subset B.' }
-    ];
-  }
+
+  getResearchInsights: async (): Promise<ResearchInsights> => {
+    return fetcher<ResearchInsights>('/research/insights');
+  },
+
+  // --- GLOBAL NODE ---
+  getNodes: async (): Promise<FederatedNode[]> => {
+    const data = await fetcher<{ nodes: FederatedNode[] }>('/nodes');
+    return data.nodes;
+  },
+
+  getNode: async (id: string): Promise<NodeDetails> => {
+    const data = await fetcher<{ node: NodeDetails }>(`/nodes/${id}`);
+    return data.node;
+  },
+
+  getNodeStatus: async (id: string): Promise<NodeStatus> => {
+    return fetcher<NodeStatus>(`/nodes/${id}/status`);
+  },
+
+  getNodeMetrics: async (id: string): Promise<NodeMetrics> => {
+    return fetcher<NodeMetrics>(`/nodes/${id}/metrics`);
+  },
+
+  // --- GLOBAL FEDERATED ROUNDS ---
+  getFederatedRounds: async (): Promise<FederatedRoundSnapshot[]> => {
+    const data = await fetcher<{ rounds: FederatedRoundSnapshot[] }>('/api/federated/rounds');
+    return data.rounds;
+  },
+
+  getFederatedRound: async (roundId: string): Promise<FederatedRoundSnapshot> => {
+    return fetcher<FederatedRoundSnapshot>(`/api/federated/rounds/${roundId}`);
+  },
 };
