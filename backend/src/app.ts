@@ -65,6 +65,7 @@ app.get("/health", (_req, res) => {
 
 app.use("/auth", authRoutes);
 
+// Local hospital patient and prediction API.
 app.use("/patients", patientRoutes);
 
 app.use("/api", demoRoutes);

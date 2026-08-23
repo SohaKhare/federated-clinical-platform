@@ -38,8 +38,8 @@
 ## Phase 3 — FedAvg Aggregation
 
 - [x] FedAvg strategy wiring on server (`federated/src/federated/server_app.py`)
-- [ ] Round tracking + global loss/metrics logging across rounds
-- [ ] Persist round history (maps to `logs` schema)
+- [x] Round tracking + global loss/metrics logging across rounds
+- [x] Persist round history (maps to `logs` schema)
 
 ## Phase 4 — Differential Privacy
 
@@ -54,16 +54,16 @@
 
 ## Platform Layer
 
-- [x] Database implementing `patients`/`logs` schema (Postgres, live on Supabase — `users`, `patients`, `patient_events`, `logs`)
+- [~] Database implementing `patients`/`logs` schema (Supabase SQL migration exists; runtime connection currently blocked by P1001)
 - [x] Express backend: local-node endpoints returning real data — patients CRUD/events (hospital-isolated), `GET /logs`, `GET /federated/status`, `GET /privacy/parameters`, `GET /research/summary`, `GET /research/insights`. `/api/hospital/summary` is still a static demo stub, not real data.
 - [x] Global federated round status endpoints: `GET /api/federated/rounds` and `GET /api/federated/rounds/:roundId`, backed by persisted round snapshots.
 - [ ] Docker Compose: flower-server, hospital-a/b/c, backend, db, frontend
-- [ ] Frontend: replace starter template with hospital dashboard + federated server dashboard
+- [x] Frontend: hospital dashboard, doctor workspace, and global federated dashboard
 - [x] Add a local-only presentation control using 10–20 held-out real patient rows for the selected day
-- [ ] Clearly label generated records as demo/synthetic data and keep them separate from real clinical data
-- [ ] Add a Global Node control to start/approve an aggregation round and broadcast the resulting global model to local nodes
+- [x] Clearly label presentation records as demo records in their clinical snapshot
+- [x] Add a Global Node control to start/approve an aggregation round and broadcast the resulting global model to local nodes
 - [x] Add Global UI read endpoints for federated round status: `GET /api/federated/rounds` and `GET /api/federated/rounds/:roundId`
-- [ ] Show each local node receiving the new global model version and using it for the next prediction
+- [~] Show each local node receiving the new global model version and using it for the next prediction
 - [ ] Display model-version and weight/update-change information without exposing raw patient records or individual hospital updates
 - [ ] Add an analytics page showing local/global sample counts, participating nodes, round progress, update counts, model versions, and metric changes over time
 - [ ] Show how local model updates contribute to a new global model while preserving the Local/Global Node boundary
@@ -80,6 +80,13 @@
 
 - [x] Added Flower dependency and verified the Python package import/version output.
 - [x] Switched the active model to the real UCI Cleveland Heart Disease dataset and trained three FedAvg rounds.
+- [x] Added the authenticated local presentation-batch route and database insertion flow.
+- [x] Added local doctor create/edit/predict flow and the Flower prediction bridge.
+- [x] Added callback-driven patient `contributed_to_round` marking after local training completes.
+- [~] Feed newly inserted PostgreSQL patient snapshots into the next local Flower training run; current simulation still trains from the static CSV source.
+- [~] Supabase connectivity is blocking runtime database insertion: `P1001` at `aws-0-ap-south-1.pooler.supabase.com:5432`.
+- [x] Confirmed `federated/models/clinical_model.pt` exists; no diabetes `.pt` checkpoint is currently present, only diabetes/COVID metric JSON artifacts.
+- [x] Clinical model smoke-tested: 149 training rows, 148 presentation rows, 28 encoded inputs, sample prediction returned successfully.
 
 ## Note on scope conflict
 

@@ -6,17 +6,6 @@ import { api, type Patient } from '@/lib/api';
 import { Search, Moon } from 'lucide-react';
 import PresentationBatchButton from '../../components/PresentationBatchButton';
 
-interface Patient {
-  patient_id: string;
-  hospital_id: string;
-  name: string;
-  age: number;
-  sex: string;
-  contributed_to_round: number;
-  updated_at: string;
-  created_at: string;
-}
-
 export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,19 +13,18 @@ export default function PatientsPage() {
   const [search, setSearch] = useState('');
   const [sexFilter, setSexFilter] = useState('All');
 
-  useEffect(() => {
-    async function load() {
-      try {
-        setPatients(await api.getPatients());
-      } catch (e) {
-        console.error('Failed to load patients', e);
-        setError(e instanceof Error ? e.message : 'Failed to load patients');
-      } finally {
-        setLoading(false);
-      }
+  const load = useCallback(async () => {
+    try {
+      setPatients(await api.getPatients());
+    } catch (e) {
+      console.error('Failed to load patients', e);
+      setError(e instanceof Error ? e.message : 'Failed to load patients');
+    } finally {
+      setLoading(false);
     }
-    load();
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();

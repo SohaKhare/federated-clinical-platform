@@ -1,6 +1,6 @@
 "use client";
 import styles from './Sidebar.module.css';
-import { Shield, Home, Map, FileText, Settings, User, LogOut, Network } from 'lucide-react';
+import { Shield, Home, Map, FileText, Settings, User, LogOut, Network, Stethoscope } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
@@ -39,6 +39,9 @@ export default function Sidebar() {
         <Link href="/patients" className={`${styles.iconWrapper} ${pathname.startsWith('/patients') ? styles.active : ''}`}>
           <User size={20} />
         </Link>
+        {user?.role === 'local' && <Link href="/doctor" className={`${styles.iconWrapper} ${pathname.startsWith('/doctor') ? styles.active : ''}`} title="Doctor workspace">
+          <Stethoscope size={20} />
+        </Link>}
         {user?.role === 'global' && <Link href="/global" className={`${styles.iconWrapper} ${pathname.startsWith('/global') ? styles.active : ''}`} title="Global node">
           <Network size={20} />
         </Link>}

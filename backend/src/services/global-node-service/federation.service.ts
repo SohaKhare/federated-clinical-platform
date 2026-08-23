@@ -178,6 +178,11 @@ export async function recordFederatedCallback(
   record.status = record.status === "starting" ? "collecting" : record.status;
   record.updatedAt = now;
 
+  await prisma.patient.updateMany({
+    where: { hospitalId: input.nodeId, contributedToRound: null },
+    data: { contributedToRound: record.round },
+  });
+
   await prisma.log.upsert({
     where: {
       nodeId_round_direction: {

@@ -4,13 +4,19 @@ import json
 import os
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
+import pandas as pd
+import torch
+
+from federated.model import ClinicalModel
 from federated.run import run_federated
+from federated.task import FEATURE_COLUMNS, _features, _read_training_rows
 
 
 class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
-        if self.path != "/federation/runs":
+        if self.path not in ("/federation/runs", "/federation/predict"):
             self.send_error(404)
             return
 
@@ -22,6 +28,10 @@ class Handler(BaseHTTPRequestHandler):
 
         length = int(self.headers.get("Content-Length", "0"))
         body = json.loads(self.rfile.read(length) or b"{}")
+        if self.path == "/federation/predict":
+            self._predict(body)
+            return
+
         required = ["round_id", "round", "node_ids", "callback_url"]
         if any(key not in body for key in required):
             self.send_error(400, "round_id, round, node_ids, and callback_url are required")
@@ -38,6 +48,43 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.end_headers()
         self.wfile.write(json.dumps({"status": "started", "round_id": body["round_id"]}).encode())
+
+    def _predict(self, body: dict[str, object]) -> None:
+        train = _read_training_rows()
+        _, columns, means, stds = _features(train)
+        sex = str(body.get("sex", "M")).lower()
+        sex_value = "1" if sex in ("m", "male", "1") else "0"
+        symptoms = [str(symptom).lower() for symptom in body.get("symptoms", [])]
+        conditions = body.get("health_conditions") if isinstance(body.get("health_conditions"), dict) else {}
+        row = {
+            "age": float(body.get("age", 0)),
+            "sex": sex_value,
+            "cp": "4" if any("chest" in symptom for symptom in symptoms) else "1",
+            "trestbps": float(conditions.get("trestbps", 120)),
+            "chol": float(conditions.get("chol", 200)),
+            "fbs": "1" if conditions.get("fbs") in (1, "1", True) else "0",
+            "restecg": str(conditions.get("restecg", "0")),
+            "thalach": float(conditions.get("thalach", 150)),
+            "exang": "1" if conditions.get("exang") in (1, "1", True) else "0",
+            "oldpeak": float(conditions.get("oldpeak", 0)),
+            "slope": str(conditions.get("slope", "1")),
+            "ca": str(conditions.get("ca", "0")),
+            "thal": str(conditions.get("thal", "3")),
+        }
+        features, _, _, _ = _features(pd.DataFrame([row], columns=FEATURE_COLUMNS), columns, means, stds)
+        checkpoint = torch.load(Path.cwd() / "models" / "clinical_model.pt", map_location="cpu", weights_only=True)
+        model = ClinicalModel(checkpoint["input_size"])
+        model.load_state_dict(checkpoint["state_dict"])
+        model.eval()
+        with torch.no_grad():
+            probability = torch.softmax(model(torch.tensor(features.to_numpy(), dtype=torch.float32)), dim=1)[0, 1].item()
+        self._json({"prediction": probability >= 0.5, "probability": round(probability, 4)})
+
+    def _json(self, payload: dict[str, object]) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(payload).encode())
 
     def log_message(self, format: str, *args: object) -> None:
         print(format % args)

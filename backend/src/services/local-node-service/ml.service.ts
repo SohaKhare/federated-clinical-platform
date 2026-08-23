@@ -66,6 +66,25 @@ export async function startFederatedTraining(input: {
   return response.json();
 }
 
+export async function predictLocalPatient(input: {
+  age: number;
+  sex: string;
+  symptoms: string[];
+  health_conditions?: Record<string, unknown>;
+}) {
+  const response = await fetch(`${env.federatedUrl}/federation/predict`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Federation-Key": env.federationSharedSecret,
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) throw new Error(`ML service returned status ${response.status}.`);
+  return response.json();
+}
+
 /** Log statuses that mean a training run is still in flight. */
 const IN_FLIGHT_STATUSES = new Set<string>(["pending", "preparing", "submitted"]);
 /** Statuses proving an exchange for a round actually completed. */

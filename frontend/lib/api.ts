@@ -1,7 +1,7 @@
 // API client for the Federated Clinical Platform backend.
 // All endpoints below are implemented in the backend (see backend/testing_io.md).
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export class ApiError extends Error {
   status: number;
@@ -364,6 +364,14 @@ export const api = {
   }> => {
     return fetcher('/patients/presentation-batch');
   },
+  predictPatient: async (input: {
+    age: number;
+    sex: string;
+    symptoms: string[];
+    health_conditions?: HealthConditions;
+  }): Promise<{ prediction: boolean; probability: number }> => {
+    return fetcher('/patients/predict', { method: 'POST', body: JSON.stringify(input) });
+  },
 
   // --- LOGS ---
   getLogs: async (params: { direction?: string; status?: string; round?: number; page?: number; pageSize?: number } = {}): Promise<LogsResponse> => {
@@ -396,7 +404,8 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(targetNodeIds ? { targetNodeIds } : {}),
   }),
-  getGlobalRound: async (roundId: string) => fetcher(`/api/federated/rounds/${roundId}`, { method: 'GET' }),
+  getGlobalRound: async (roundId: string): Promise<{ round: FederatedRoundSnapshot }> =>
+    fetcher(`/api/federated/rounds/${roundId}`, { method: 'GET' }),
   broadcastGlobalWeights: async (roundId: string) => fetcher(`/api/federated/rounds/${roundId}/broadcast`, {
     method: 'POST',
     body: JSON.stringify({ notes: 'Global Flower model broadcast to participating hospitals.' }),
@@ -417,9 +426,8 @@ export const api = {
   },
 
   // --- GLOBAL NODE ---
-  getNodes: async (): Promise<FederatedNode[]> => {
-    const data = await fetcher<{ nodes: FederatedNode[] }>('/nodes');
-    return data.nodes;
+  getNodes: async (): Promise<{ nodes: FederatedNode[] }> => {
+    return fetcher<{ nodes: FederatedNode[] }>('/nodes');
   },
 
   getNode: async (id: string): Promise<NodeDetails> => {

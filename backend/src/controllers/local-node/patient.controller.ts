@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { env } from "../../config/env.js";
 
 import {
   createPatient as createPatientRecord,
@@ -125,7 +126,12 @@ export async function getPresentationBatch(req: Request, res: Response) {
     return res.json({ hospital_id: hospitalId, patients: patients.map(stripHospitalId) });
   } catch (error) {
     console.error("Presentation batch error:", error);
-    return res.status(500).json({ message: "Unable to load presentation patients." });
+    return res.status(500).json({
+      message: "Unable to load presentation patients.",
+      ...(env.nodeEnv === "development" && error instanceof Error
+        ? { detail: error.message }
+        : {}),
+    });
   }
 }
 

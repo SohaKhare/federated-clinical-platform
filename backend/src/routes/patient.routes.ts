@@ -12,6 +12,7 @@ import {
   getPresentationBatch,
 } from "../controllers/local-node/patient.controller.js";
 import { extractPatientFromReport } from "../controllers/local-node/ocr.controller.js";
+import { predictPatient } from "../controllers/local-node/predict.controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.middleware.js";
 
 const ACCEPTED_REPORT_MIME = /^(image\/(png|jpe?g|webp|bmp|tiff)|application\/pdf)$/;
@@ -75,6 +76,8 @@ router.use(requireAuth, requireRole("local"));
 router.get("/", getPatients);
 
 router.get("/presentation-batch", getPresentationBatch);
+
+router.post("/predict", predictPatient);
 
 router.post("/", createPatient);
 
