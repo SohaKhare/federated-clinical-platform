@@ -36,6 +36,11 @@ export const env = {
   federatedUrl:
     process.env.FEDERATED_URL ?? "http://localhost:8000",
 
+  backendUrl,
+
+  federationSharedSecret:
+    process.env.FEDERATION_SHARED_SECRET ?? "development-federation-key",
+
   databaseUrl: requiredEnv("DATABASE_URL"),
 
   google: {

@@ -46,7 +46,10 @@ create table if not exists public.logs (
   direction text not null check (direction in ('outgoing', 'incoming')),
   round integer not null check (round >= 0),
   metadata jsonb not null default '{}'::jsonb,
-  status text not null check (status in ('pending', 'confirmed', 'failed')),
+  status text not null check (status in (
+    'pending', 'confirmed', 'failed', 'preparing', 'submitted',
+    'received', 'applied', 'synced'
+  )),
   created_at timestamptz not null default now(),
   unique (node_id, round, direction)
 );
@@ -56,6 +59,19 @@ create index if not exists logs_node_round_idx
 
 create index if not exists logs_status_idx
   on public.logs (status);
+
+create table if not exists public.federated_rounds (
+  round_id uuid primary key,
+  round integer not null unique check (round >= 0),
+  status text not null,
+  target_node_ids jsonb not null default '[]'::jsonb,
+  snapshot jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists federated_rounds_status_idx
+  on public.federated_rounds (status);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -77,7 +93,13 @@ create trigger patients_set_updated_at
 before update on public.patients
 for each row execute function public.set_updated_at();
 
+drop trigger if exists federated_rounds_set_updated_at on public.federated_rounds;
+create trigger federated_rounds_set_updated_at
+before update on public.federated_rounds
+for each row execute function public.set_updated_at();
+
 alter table public.users enable row level security;
 alter table public.patients enable row level security;
 alter table public.patient_events enable row level security;
 alter table public.logs enable row level security;
+alter table public.federated_rounds enable row level security;

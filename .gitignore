@@ -69,6 +69,8 @@ out/
 *.tsbuildinfo
 *.map
 *.d.ts
+dist/
+backend/dist/
 
 # =========================
 # Frontend environment

@@ -53,6 +53,7 @@ The Local Node runs inside a participating hospital. It can access that hospital
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `GET` | `/federated/status` | Return local participation and training status. |
+| `POST` | `/federated/rounds/{roundId}/start-training` | Ask the local ML service to start a training run. |
 | `GET` | `/federated/round` | Return the current round, global model version, and local state. |
 | `POST` | `/federated/participate` | Confirm participation and begin the local training workflow when instructed. |
 | `GET` | `/privacy/status` | Show whether DP and Secure Aggregation are active locally. |
@@ -89,6 +90,8 @@ The Global Node coordinates hospitals, rounds, aggregation, global model version
 | `GET` | `/federated/rounds` | List rounds with status, participants, and global metrics. |
 | `GET` | `/federated/rounds/{id}` | Return detailed status and results for one round. |
 | `POST` | `/federated/rounds/start` | Start a new federated round. |
+| `GET` | `/api/federated/rounds/{roundId}` | Return a persisted round snapshot for the Global UI. |
+| `GET` | `/api/federated/rounds/{roundId}` | Return a persisted round snapshot for the Global UI. |
 | `POST` | `/federated/pull` | Request protocol/status synchronization; never pull patient data. |
 | `GET` | `/models` | List global model versions. |
 | `GET` | `/models/latest` | Return the active model's metadata and metrics. |
@@ -164,6 +167,12 @@ Headers:
 Content-Type: application/json
 X-Federation-Key: <shared secret from env>
 ```
+
+The local backend starts this request through
+`POST /federated/rounds/{roundId}/start-training`. The ML service returns its
+result through `POST /api/federated/rounds/{roundId}/callback` using the same
+`X-Federation-Key` header. The callback is service-to-service and does not
+require a browser session.
 
 Expected response `202`:
 

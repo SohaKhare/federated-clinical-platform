@@ -4,8 +4,8 @@ import { getNodeStatus } from "../../services/global-node-service/node.service.j
 
 /**
  * "My own federation status" for the authenticated hospital — reuses the
- * same lookup the global node uses to check on any node, just always
- * scoped to the caller's own userId.
+ * same lookup the global node uses to check on any node, just always scoped
+ * to the caller's own userId.
  */
 export async function getFederatedStatus(req: Request, res: Response) {
   try {
