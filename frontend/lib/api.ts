@@ -1,6 +1,6 @@
 // Mock API Service for Local Node Endpoints
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 async function fetcher(endpoint: string, options: RequestInit = {}) {
   const res = await fetch(`${API_URL}${endpoint}`, {
@@ -18,19 +18,28 @@ async function fetcher(endpoint: string, options: RequestInit = {}) {
   return res.json();
 }
 
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  picture?: string;
+  role: 'local' | 'global';
+}
+
 export const api = {
   // --- AUTH ---
-  login: async (credentials: any) => {
-    return { token: 'mock-token', user: { name: 'Nika Meyer' } };
+  loginWithGoogle: () => {
+    window.location.href = `${API_URL}/auth/google`;
   },
   logout: async () => {
-    return { success: true };
+    return fetcher('/auth/logout', { method: 'POST' });
   },
-  getMe: async () => {
-    return { name: 'Nika Meyer', role: 'Researcher', email: 'name@example.com', hospitalId: '0' };
+  getMe: async (): Promise<AuthUser> => {
+    const data = await fetcher('/auth/me');
+    return data.user;
   },
   getPresentationBatch: async () => {
-    const response = await fetch('http://localhost:5000/patients/presentation-batch', { credentials: 'include' });
+    const response = await fetch(`${API_URL}/patients/presentation-batch`, { credentials: 'include' });
     if (!response.ok) throw new Error('Unable to load the presentation pool.');
     return response.json();
   },

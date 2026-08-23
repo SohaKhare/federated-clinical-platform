@@ -7,6 +7,7 @@ import {
   getGoogleClientId,
 } from "../services/google-auth.service.js";
 import { upsertLocalUser } from "../services/user.service.js";
+import { env } from "../config/env.js";
 
 /**
  * Start Google OAuth login.
@@ -103,7 +104,7 @@ export async function googleCallback(req: Request, res: Response) {
      * Later we can redirect to different dashboards
      * depending on the node/role.
      */
-    return res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
+    return res.redirect(`${env.frontendUrl}/`);
   } catch (error) {
     console.error("Google OAuth error:", error);
 

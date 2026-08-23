@@ -1,11 +1,11 @@
 "use client";
 import styles from './login.module.css';
 import { Shield } from 'lucide-react';
+import { api } from '@/lib/api';
 
 export default function Login() {
   const handleGoogleLogin = () => {
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-    window.location.href = `${API_URL}/auth/google`;
+    api.loginWithGoogle();
   };
 
   return (

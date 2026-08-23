@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './Header.module.css';
-import { Search, User } from 'lucide-react';
+import { Search, LogOut } from 'lucide-react';
+import { useAuth } from '@/lib/useAuth';
 
 const searchableRoutes = [
   { name: 'Dashboard Overview', path: '/', keywords: ['home', 'main'] },
@@ -17,6 +18,7 @@ export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { user, logout } = useAuth();
 
   const filteredRoutes = searchableRoutes.filter(route => {
     const term = query.toLowerCase();
@@ -92,10 +94,18 @@ export default function Header() {
       
       <div className={styles.actions}>
         <div className={styles.profileInfo}>
-          <span className={styles.userName}>Leander Fernandes</span>
-          <div className={styles.avatar}>
-             <User size={20} color="#fff" />
-          </div>
+          <span className={styles.userName}>{user?.name ?? '…'}</span>
+          {user?.picture ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={user.picture} alt={user.name} className={styles.avatar} referrerPolicy="no-referrer" />
+          ) : (
+            <div className={styles.avatar}>
+              <LogOut size={16} color="#fff" />
+            </div>
+          )}
+          <button type="button" onClick={logout} title="Log out" className={styles.logoutBtn} aria-label="Log out">
+            <LogOut size={18} />
+          </button>
         </div>
       </div>
     </header>

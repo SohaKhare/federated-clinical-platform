@@ -33,8 +33,7 @@ export const env = {
 
   corsOrigins,
 
-  federatedUrl:
-    process.env.FEDERATED_URL ?? "http://localhost:8000",
+  federatedUrl: process.env.FEDERATED_URL ?? "http://localhost:8001",
 
   backendUrl,
 

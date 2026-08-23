@@ -111,6 +111,30 @@
   overflow: hidden;
 }
 
+.avatar img,
+img.avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.logoutBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  color: var(--color-text-main);
+  cursor: pointer;
+}
+
+.logoutBtn:hover {
+  background-color: #ececf1;
+}
+
 .dropdown {
   position: absolute;
   top: 100%;
