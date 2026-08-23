@@ -10,7 +10,7 @@ const requiredEnv = (name: string): string => {
   return value;
 };
 
-const port = Number(process.env.PORT ?? 5000);
+const port = Number(process.env.PORT ?? 8000);
 const backendUrl = process.env.BACKEND_URL ?? `http://localhost:${port}`;
 
 const corsOrigins = (

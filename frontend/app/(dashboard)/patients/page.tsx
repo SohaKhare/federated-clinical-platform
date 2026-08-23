@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import styles from './patients.module.css';
 import { api, type Patient } from '@/lib/api';
-import { Search, Moon } from 'lucide-react';
+import { Search } from 'lucide-react';
 import PresentationBatchButton from '../../components/PresentationBatchButton';
 
 export default function PatientsPage() {
@@ -13,18 +13,19 @@ export default function PatientsPage() {
   const [search, setSearch] = useState('');
   const [sexFilter, setSexFilter] = useState('All');
 
-  const load = useCallback(async () => {
-    try {
-      setPatients(await api.getPatients());
-    } catch (e) {
-      console.error('Failed to load patients', e);
-      setError(e instanceof Error ? e.message : 'Failed to load patients');
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    async function load() {
+      try {
+        setPatients(await api.getPatients());
+      } catch (e) {
+        console.error('Failed to load patients', e);
+        setError(e instanceof Error ? e.message : 'Failed to load patients');
+      } finally {
+        setLoading(false);
+      }
     }
+    load();
   }, []);
-
-  useEffect(() => { load(); }, [load]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -56,7 +57,7 @@ export default function PatientsPage() {
         </div>
       </div>
 
-      <PresentationBatchButton onAdded={load} />
+      <PresentationBatchButton onAdded={loadPatients} />
 
       <div className={styles.controls}>
         <div className={styles.searchWrapper}>

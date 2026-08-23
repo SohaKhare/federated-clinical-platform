@@ -378,6 +378,14 @@ export const api = {
     return fetcher<LogsResponse>(`/logs${qs(params)}`);
   },
 
+  getNodeLogs: async (nodeId: string, params: { direction?: string; status?: string; round?: number; page?: number; pageSize?: number } = {}): Promise<LogsResponse> => {
+    return fetcher<LogsResponse>(`/logs/${nodeId}${qs(params)}`);
+  },
+
+  getRoundLogs: async (roundId: string, params: { direction?: string; status?: string; page?: number; pageSize?: number } = {}): Promise<LogsResponse> => {
+    return fetcher<LogsResponse>(`/logs/round/${roundId}${qs(params)}`);
+  },
+
   // --- MODEL ---
   getModelInfo: async (): Promise<LocalModelInfo> => {
     return fetcher<LocalModelInfo>('/model');

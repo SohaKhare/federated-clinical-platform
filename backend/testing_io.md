@@ -710,7 +710,12 @@ from one test hospital with the pre-existing "AIIMS Delhi" demo history —
       "timestamp": "2026-08-23T07:53:57.505Z",
       "direction": "outgoing",
       "round": 701,
-      "metadata": {},
+      "metadata": {
+        "num_examples": 210,
+        "batch_size": 32,
+        "local_epochs": 1,
+        "metrics": { "loss": 0.42, "epsilon": 3.2, "delta": 0.00001, "clipping_norm": 1, "noise_multiplier": 1.1 }
+      },
       "status": "preparing",
       "created_at": "2026-08-23T07:53:57.505Z"
     },
@@ -720,7 +725,11 @@ from one test hospital with the pre-existing "AIIMS Delhi" demo history —
       "timestamp": "2026-08-23T07:53:57.294Z",
       "direction": "outgoing",
       "round": 700,
-      "metadata": { "num_examples": 210 },
+      "metadata": {
+        "num_examples": 210,
+        "metrics": { "epsilon": 3.2, "delta": 0.00001, "clipping_norm": 1, "noise_multiplier": 1.1 },
+        "loss": 0.31
+      },
       "status": "confirmed",
       "created_at": "2026-08-23T07:53:57.294Z"
     },
@@ -730,7 +739,13 @@ from one test hospital with the pre-existing "AIIMS Delhi" demo history —
       "timestamp": "2026-08-22T06:35:44.350Z",
       "direction": "incoming",
       "round": 4,
-      "metadata": { "message": "Global model successfully synchronized", "global_round": 4, "model_version": "global-v4", "participating_nodes": 5 },
+      "metadata": {
+        "message": "Global model successfully synchronized",
+        "global_round": 4,
+        "model_version": "global-v4",
+        "participating_nodes": 5,
+        "metrics": { "epsilon": 3.2, "delta": 0.00001, "clipping_norm": 1, "noise_multiplier": 1.1 }
+      },
       "status": "synced",
       "created_at": "2026-08-22T06:35:44.350Z"
     }
@@ -761,7 +776,12 @@ Expected response `200` (real captured output):
       "timestamp": "2026-08-23T07:53:57.505Z",
       "direction": "outgoing",
       "round": 701,
-      "metadata": {},
+      "metadata": {
+        "num_examples": 210,
+        "batch_size": 32,
+        "local_epochs": 1,
+        "metrics": { "loss": 0.42, "epsilon": 3.2, "delta": 0.00001, "clipping_norm": 1, "noise_multiplier": 1.1 }
+      },
       "status": "preparing",
       "created_at": "2026-08-23T07:53:57.505Z"
     }
@@ -796,7 +816,11 @@ Expected response `200` (real captured output):
       "timestamp": "2026-08-23T07:53:57.294Z",
       "direction": "outgoing",
       "round": 700,
-      "metadata": { "num_examples": 210 },
+      "metadata": {
+        "num_examples": 210,
+        "metrics": { "epsilon": 3.2, "delta": 0.00001, "clipping_norm": 1, "noise_multiplier": 1.1 },
+        "loss": 0.31
+      },
       "status": "confirmed",
       "created_at": "2026-08-23T07:53:57.294Z"
     }

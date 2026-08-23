@@ -23,7 +23,7 @@ export default function GlobalPage() {
 
   useEffect(() => {
     api.getNodes()
-      .then((data) => setNodes(data.nodes))
+      .then((data) => setNodes(data))
       .catch((error) => setMessage(error.message));
   }, []);
 
@@ -31,8 +31,8 @@ export default function GlobalPage() {
     if (!current?.round_id || ['completed', 'partial', 'failed'].includes(current.status)) return;
     const timer = window.setInterval(async () => {
       try {
-        const data = await api.getGlobalRound(current.round_id);
-        setCurrent(data.round);
+        const data = await api.getGlobalRound(current.round_id) as { round: Round };
+        if (data?.round) setCurrent(data.round);
       } catch (error) {
         setMessage(error instanceof Error ? error.message : 'Unable to read round status.');
       }
@@ -44,8 +44,8 @@ export default function GlobalPage() {
     setWorking(true);
     setMessage('Starting Flower FedAvg across local hospitals...');
     try {
-      const data = await api.startGlobalRound();
-      setCurrent(data.round);
+      const data = await api.startGlobalRound() as { round: Round };
+      if (data?.round) setCurrent(data.round);
       setMessage('Flower run started. Waiting for local updates.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Unable to start Flower.');
@@ -58,8 +58,8 @@ export default function GlobalPage() {
     if (!current) return;
     setWorking(true);
     try {
-      const data = await api.broadcastGlobalWeights(current.round_id);
-      setCurrent(data.round);
+      const data = await api.broadcastGlobalWeights(current.round_id) as { round: Round };
+      if (data?.round) setCurrent(data.round);
       setMessage('Aggregated global weights broadcast to participating hospitals.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Unable to broadcast weights.');

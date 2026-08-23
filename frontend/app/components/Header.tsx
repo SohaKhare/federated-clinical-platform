@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/useAuth';
 
 const searchableRoutes = [
   { name: 'Dashboard Overview', path: '/', keywords: ['home', 'main'] },
+  { name: 'Hospital Nodes Directory', path: '/nodes', keywords: ['nodes', 'hospitals', 'global', 'servers'] },
   { name: 'Patients Directory', path: '/patients', keywords: ['patients', 'list', 'people'] },
   { name: 'System Logs', path: '/logs', keywords: ['logs', 'history', 'events', 'log'] },
   { name: 'Heatmap (Maps)', path: '/heatmap', keywords: ['heatmap', 'maps', 'map', 'india', 'geography'] },
