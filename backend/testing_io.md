@@ -572,16 +572,16 @@ Invalid query response `400` (real captured output, `?pageSize=99999`):
 }
 ```
 
-Note: nothing currently writes to the `logs` table in normal operation (the
-Python federated package doesn't integrate with the backend yet), so this
-will return `{"logs": [], "pagination": {"page":1,"pageSize":20,"total":0,"totalPages":0}}`
-until a federated round actually runs and logs something.
+Note: the new federation round endpoints write round lifecycle rows into the
+`logs` table, but until a federated round is started this will still return
+`{"logs": [], "pagination": {"page":1,"pageSize":20,"total":0,"totalPages":0}}`.
 
 ### GET `/federated/status`
 
-Purpose: Return the caller's own hospital's federation status — reuses the
-same lookup the global node uses to check on any node
-(`node.service.ts::getNodeStatus`), just always scoped to the caller.
+Purpose: Return the caller's own hospital's federation status. This is the
+local node's view of the current federated round lifecycle and reuses the
+same lookup the global node uses to check any hospital
+(`node.service.ts::getNodeStatus`), just scoped to the caller.
 
 Expected response `200` (real captured output, same 3 seeded logs as above):
 
@@ -601,6 +601,16 @@ Expected response `200` (real captured output, same 3 seeded logs as above):
 
 `status` is `"registered"` if the hospital has never appeared in `logs`,
 `"active"` if its last activity was within 24 hours, otherwise `"idle"`.
+`federation_state` is the compact round-state summary that the global node
+tracks per hospital. In the async push/callback model, the lifecycle will
+usually move through these statuses:
+
+- `preparing` when the global round start request lands on a local node
+- `submitted` or `training_complete` when the local node finishes training
+  and reports back
+- `received` when the global node accepts and stores the update
+- `applied` or `synced` when the local node receives the new global weights
+
 Note `federation_state` reflects the single most-recent log **by
 timestamp**, not the highest round number — here the round-2 `outgoing`
 row happened to be inserted after the round-3 rows, so it's what
@@ -890,6 +900,65 @@ manually set in the database — see `SCHEMA.md`):
 4. Call every local-only route (`/patients`, `/logs`, `/research/*`, `/privacy/*`, `/federated/status`, `/api/hospital/summary`) as the global user and confirm each returns `403`.
 5. Call every global-only route (`/nodes*`, `/api/federated/status`) as a local user and confirm each returns `403`.
 
+## Federation and ML bridge (now available)
+
+### POST `/federated/rounds/:roundId/start-training`
+
+Auth: Authenticated local user only.
+
+Input:
+
+```json
+{
+  "round": 1,
+  "config": {
+    "local_epochs": 1,
+    "batch_size": 32
+  }
+}
+```
+
+The backend forwards the local user ID, round ID, round number, config, and
+callback URL to the ML service. Patient records are never sent.
+
+Expected response: `202` with the ML service's accepted-run response.
+
+### GET `/api/federated/rounds/:roundId`
+
+Auth: Authenticated global user only.
+
+Purpose: Return the persisted status snapshot for a federated round.
+
+Expected response: `200` with round status, participating nodes, node phases,
+and progress counters. Unknown round IDs return `404`.
+
+### POST `/api/federated/rounds/:roundId/callback`
+
+Auth: ML service only, using the `X-Federation-Key` header. A browser session
+is not required.
+
+Input uses the existing callback format:
+
+```json
+{
+  "nodeId": "local-user-uuid",
+  "update": {
+    "weights": {
+      "layer.weight": [[0.1, 0.2]]
+    }
+  },
+  "metrics": {
+    "loss": 0.31,
+    "epsilon": 3.2,
+    "delta": 0.00001
+  },
+  "notes": "Local training completed"
+}
+```
+
+The callback accepts only protocol data and rejects a missing or incorrect key
+with `401`.
+
 ## To be built
 
 These items are planned but are not currently available through the backend.
@@ -906,9 +975,10 @@ Express backend:
 
 ### Federated and privacy APIs
 
-- `GET /federated/round` — blocked on a real model-version registry (round
-  number alone is available, but "global model version" isn't).
-- `POST /federated/participate` — needs a real training workflow to trigger.
+- `POST /api/federated/rounds/start` — starts a federated round from the
+  global node side and fans out a fire-and-forget request.
+- `POST /api/federated/rounds/:roundId/broadcast` — broadcasts aggregated
+  weights from the global side after enough updates are received.
 - `GET /privacy/status` — nothing yet configures whether DP/SecAgg are
   meant to be on, so there's nothing honest to report here (distinct from
   `GET /privacy/parameters`, which is implemented and reports real numbers

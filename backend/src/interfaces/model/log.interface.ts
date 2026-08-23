@@ -1,7 +1,16 @@
 export const LOG_DIRECTIONS = ["outgoing", "incoming"] as const;
 export type LogDirection = (typeof LOG_DIRECTIONS)[number];
 
-export const LOG_STATUSES = ["pending", "confirmed", "failed"] as const;
+export const LOG_STATUSES = [
+  "pending",
+  "confirmed",
+  "failed",
+  "preparing",
+  "submitted",
+  "received",
+  "applied",
+  "synced",
+] as const;
 export type LogStatus = (typeof LOG_STATUSES)[number];
 
 export interface LogMetadata {

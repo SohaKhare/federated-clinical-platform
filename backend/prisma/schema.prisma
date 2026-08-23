@@ -69,3 +69,15 @@ model Log {
   @@index([status])
   @@map("logs")
 }
+
+model FederatedRound {
+  roundId       String   @id @map("round_id") @db.Uuid
+  round         Int      @unique
+  status        String
+  targetNodeIds Json     @map("target_node_ids")
+  snapshot      Json
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("federated_rounds")
+}
