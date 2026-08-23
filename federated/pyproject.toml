@@ -10,13 +10,16 @@ requires-python = ">=3.13"
 dependencies = [
     "flwr[simulation]>=1.34,<2.0",
     "pandas>=2.2,<3.0",
+    "pillow>=11.0,<12.0",
     "torch>=2.7,<3.0",
 ]
 
 [project.scripts]
 federated = "federated:main"
 prepare-data = "federated.prepare_data:main"
+prepare-xray-data = "federated.prepare_xray_data:main"
 run-federated = "federated.run:main"
+run-xray-federated = "federated.xray_run:main"
 
 [build-system]
 requires = ["uv_build>=0.12.3,<0.13.0"]
