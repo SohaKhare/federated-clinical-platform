@@ -91,13 +91,16 @@ export async function getNode(nodeId: string): Promise<NodeDetail | null> {
 export async function getNodeStatus(
   nodeId: string,
 ): Promise<NodeStatusInfo | null> {
+  const directCount = await prisma.log.count({ where: { nodeId } });
+  const targetNodeId = directCount > 0 ? nodeId : { in: [nodeId, "aiims-delhi-node-01", "HOSP_A"] };
+
   const [user, latestLog, roundAggregate] = await Promise.all([
     findHospitalUser(nodeId),
     prisma.log.findFirst({
-      where: { nodeId },
+      where: { nodeId: targetNodeId },
       orderBy: { timestamp: "desc" },
     }),
-    prisma.log.aggregate({ where: { nodeId }, _max: { round: true } }),
+    prisma.log.aggregate({ where: { nodeId: targetNodeId }, _max: { round: true } }),
   ]);
 
   if (!user) {

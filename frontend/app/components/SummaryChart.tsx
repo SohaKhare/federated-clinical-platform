@@ -1,53 +1,48 @@
 "use client";
+import { useEffect, useState } from 'react';
 import styles from './SummaryChart.module.css';
 import { BarChart, Bar, ResponsiveContainer, Cell } from 'recharts';
-import { Download, Crosshair } from 'lucide-react';
-
-const data = [
-  { name: '10 Oct', value: 2, fill: '#b8cfcd' },
-  { name: '12 Oct', value: 4, fill: '#ffffff', highlight: true },
-  { name: '14 Oct', value: 2, fill: '#b8cfcd' },
-  { name: '16 Oct', value: 3, fill: '#b8cfcd' },
-  { name: '18 Oct', value: 6, fill: '#333333' },
-  { name: '20 Oct', value: 8, fill: '#1a1a1a' },
-  { name: '22 Oct', value: 5, fill: '#555555' },
-  { name: '24 Oct', value: 4, fill: '#777777' },
-  { name: '26 Oct', value: 3, fill: '#999999' },
-  { name: '28 Oct', value: 2, fill: '#b8cfcd' },
-];
+import { api, type ResearchSummary, type PrivacyParameters } from '@/lib/api';
 
 export default function SummaryChart() {
+  const [summary, setSummary] = useState<ResearchSummary | null>(null);
+  const [privacy, setPrivacy] = useState<PrivacyParameters | null>(null);
+
+  useEffect(() => {
+    api.getResearchSummary().then(setSummary).catch(() => {});
+    api.getPrivacyParameters().then(setPrivacy).catch(() => {});
+  }, []);
+
+  // Build bar chart from top diagnoses (real data) or fallback to sex breakdown
+  const chartData = summary
+    ? summary.top_diagnosed_diseases.length > 0
+      ? summary.top_diagnosed_diseases.map((d, i) => ({
+          name: d.diagnosis,
+          value: d.count,
+          fill: ['#1a1a1a', '#333333', '#555555', '#777777', '#999999', '#b8cfcd'][i % 6],
+        }))
+      : Object.entries(summary.sex_breakdown).map(([sex, count], i) => ({
+          name: sex === 'F' ? 'Female' : sex === 'M' ? 'Male' : sex,
+          value: count,
+          fill: i === 0 ? '#1a1a1a' : '#b8cfcd',
+        }))
+    : [];
+
   return (
     <div className={styles.chartWrapper}>
-      {/* Top tabs */}
-      <div className={styles.tabSection}>
-        {/* <div className={styles.tabs}>
-          <span className={styles.tab}>All</span>
-          <span className={`${styles.tab} ${styles.active}`}>Summary</span>
-          <span className={styles.tab}>Demographics</span>
-          <span className={styles.tab}>Logs</span>
-          <span className={styles.tab}>Heatmap</span>
-          <span className={styles.addTab}>+</span>
-        </div> */}
-        <div className={styles.tabActions}>
-          <div className={styles.iconBtn}><Download size={14} /></div>
-          <div className={styles.iconBtn}><Crosshair size={14} /></div>
-        </div>
-      </div>
-
       {/* Main Chart Box */}
       <div className={styles.chartContainer}>
         <div className={styles.chartHeader}>
           <div className={styles.headerLeft}>
-            <span className={styles.badge}>Predictions</span>
-            <h2 className={styles.title}>Model Summary</h2>
+            <span className={styles.badge}>Research</span>
+            <h2 className={styles.title}>Hospital Overview</h2>
           </div>
           <div className={styles.headerRight}>
             <div className={styles.legend}>
-              <span className={styles.legendDot}></span> High Risk
+              <span className={styles.legendDot}></span> Top Diagnoses
             </div>
             <div className={styles.legend}>
-              <span className={styles.legendDotLight}></span> Stable
+              <span className={styles.legendDotLight}></span> Other
             </div>
           </div>
         </div>
@@ -55,40 +50,34 @@ export default function SummaryChart() {
         <div className={styles.contentArea}>
           <div className={styles.statsCard}>
             <div className={styles.statLine}>
-              <span className={styles.statName}>New predictions</span>
+              <span className={styles.statName}>Total patients</span>
               <div className={styles.statValueRow}>
-                 <span className={styles.bigNum}>12</span>
-                 <div className={styles.plusBtn}>+</div>
+                 <span className={styles.bigNum}>{summary?.total_patients ?? '—'}</span>
               </div>
             </div>
             <div className={styles.divider}></div>
             <div className={styles.statLine}>
-              <span className={styles.statName}>Accuracy confidence</span>
+              <span className={styles.statName}>
+                Differential Privacy: {privacy ? (privacy.dp_enabled ? `ε=${privacy.epsilon}` : 'Not yet measured') : '…'}
+              </span>
               <div className={styles.statActions}>
-                 <span className={styles.actionBtn}>View details</span>
-                 <span className={styles.actionBtn}>Export</span>
-                 <span className={styles.dots}>...</span>
+                 <span className={styles.actionBtn}>
+                   Age range: {summary ? `${summary.age.min}–${summary.age.max}` : '—'}
+                 </span>
               </div>
             </div>
           </div>
 
           <div className={styles.barArea}>
              <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} barSize={24}>
+              <BarChart data={chartData} barSize={24}>
                 <Bar dataKey="value" radius={[6, 6, 6, 6]}>
-                  {data.map((entry, index) => (
+                  {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </div>
-          
-          <div className={styles.verticalActions}>
-            <div className={styles.vIconBtnActive}><Crosshair size={14} /></div>
-            <div className={styles.vIconBtn}><Download size={14} /></div>
-            <div className={styles.vIconBtn}>~</div>
-            <div className={styles.vIconBtn}>...</div>
           </div>
         </div>
       </div>

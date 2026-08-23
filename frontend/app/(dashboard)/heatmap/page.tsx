@@ -77,7 +77,7 @@ export default function HeatmapPage() {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Data Density Heatmap</h1>
-          <p className={styles.subtitle}>Geographical distribution of patient cases/traffic</p>
+          <p className={styles.subtitle}>Geographical distribution of participating hospitals</p>
         </div>
       </div>
 
@@ -106,7 +106,7 @@ export default function HeatmapPage() {
                   <Geography
                     key={geo.rsmKey}
                     geography={geo}
-                    onMouseEnter={() => setTooltip(`${stateName} (Cases: ${value})`)}
+                    onMouseEnter={() => setTooltip(`${stateName} (Activity Index: ${value})`)}
                     onMouseLeave={() => setTooltip("")}
                     style={{
                       default: {

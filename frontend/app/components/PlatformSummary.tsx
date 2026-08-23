@@ -11,20 +11,26 @@ export default function PlatformSummary() {
   useEffect(() => {
     let cancelled = false;
 
-    api.getResearchSummary()
-      .then((s) => {
-        if (!cancelled) setTotalPatients(s.total_patients);
-      })
-      .catch(() => {});
+    const loadData = () => {
+      api.getResearchSummary()
+        .then((s) => {
+          if (!cancelled) setTotalPatients(s.total_patients);
+        })
+        .catch(() => {});
 
-    api.getLogs({ pageSize: 1 })
-      .then((data) => {
-        if (!cancelled) setRecentLogs(data.pagination.total);
-      })
-      .catch(() => {});
+      api.getLogs({ pageSize: 1 })
+        .then((data) => {
+          if (!cancelled) setRecentLogs(data.pagination.total);
+        })
+        .catch(() => {});
+    };
+
+    loadData();
+    const interval = setInterval(loadData, 5000);
 
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
   }, []);
 

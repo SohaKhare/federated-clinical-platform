@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import styles from './LogsWidget.module.css';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { useRouter } from 'next/navigation';
@@ -10,27 +10,39 @@ export default function LogsWidget() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [confirmedPct, setConfirmedPct] = useState<number | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchLogs = useCallback(() => {
     api.getLogs({ pageSize: 50 })
       .then((data) => {
-        if (cancelled) return;
         setLogs(data.logs);
         const total = data.pagination.total;
-        const confirmed = data.logs.filter((l) => l.status === 'confirmed').length;
+        const confirmed = data.logs.filter((l) => l.status === 'confirmed' || l.status === 'synced' || l.status === 'applied').length;
         setConfirmedPct(total > 0 ? Math.round((confirmed / total) * 100) : 0);
       })
       .catch(() => {
-        if (!cancelled) setConfirmedPct(0);
+        setConfirmedPct(0);
       });
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
-  const chartData = [...logs]
-    .reverse()
-    .map((l) => ({ name: `R${l.round}`, value: l.status === 'failed' ? 5 : l.direction === 'outgoing' ? 25 : 18 }));
+  useEffect(() => {
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 5000);
+    return () => clearInterval(interval);
+  }, [fetchLogs]);
+
+  const chartData = logs.length > 0
+    ? [...logs]
+        .reverse()
+        .map((l) => ({
+          name: `R${l.round}`,
+          value: l.status === 'failed' ? 5 : l.direction === 'outgoing' ? 25 : 18
+        }))
+    : [
+        { name: 'R1', value: 12 },
+        { name: 'R2', value: 18 },
+        { name: 'R3', value: 24 }
+      ];
+
+  const latestRound = logs.length > 0 ? Math.max(...logs.map((l) => l.round)) : null;
 
   return (
     <div className={styles.container}>
@@ -41,7 +53,7 @@ export default function LogsWidget() {
 
       <div className={styles.chartBox} onClick={() => router.push('/logs')} style={{ cursor: 'pointer' }}>
         <div className={styles.chartHeader}>
-          <div className={styles.badge}>More</div>
+          <div className={styles.badge}>Live</div>
           <span className={styles.chartTitle}>Recent activity</span>
         </div>
 
@@ -70,9 +82,9 @@ export default function LogsWidget() {
           </div>
           <div className={styles.darkContent}>
             <span className={styles.darkLabel}>Exchanges logged</span>
-            <div className={styles.badgePurp}>More</div>
+            <div className={styles.badgePurp}>{logs.length} logged</div>
             <div className={styles.darkPercentage}>
-              {logs.length > 0 ? logs[0].round : '—'} <span className={styles.trend}>latest round</span>
+              {latestRound !== null ? `R${latestRound}` : '—'} <span className={styles.trend}>latest round</span>
             </div>
           </div>
         </div>

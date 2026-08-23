@@ -62,13 +62,6 @@ export default function Header() {
           />
           <div className={styles.searchIcons}>
             <Search size={16} />
-            <div className={styles.voiceIcon}>
-               <svg width="10" height="14" viewBox="0 0 10 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="3" width="4" height="9" rx="2" fill="currentColor"/>
-                  <path d="M1 6V7C1 9.20914 2.79086 11 5 11C7.20914 11 9 9.20914 9 7V6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                  <path d="M5 11V14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-               </svg>
-            </div>
           </div>
         </div>
 

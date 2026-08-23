@@ -3,6 +3,7 @@ import cors from "cors";
 import session from "express-session";
 import authRoutes from "./routes/auth.routes.js";
 import demoRoutes from "./routes/demo.routes.js";
+import patientsRoutes from "./routes/patients.routes.js";
 import { env } from "./config/env.js";
 import patientRoutes from "./routes/patient.routes.js";
 import nodeRoutes from "./routes/node.routes.js";
@@ -64,7 +65,9 @@ app.get("/health", (_req, res) => {
 
 app.use("/auth", authRoutes);
 
-app.use("/patients", patientRoutes);
+app.use("/api/patients", patientsRoutes);
+
+app.use("/api", demoRoutes);
 
 app.use("/nodes", nodeRoutes);
 

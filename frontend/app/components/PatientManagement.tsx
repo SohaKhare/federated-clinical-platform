@@ -27,7 +27,7 @@ export default function PatientManagement() {
   return (
     <div className={styles.container}>
 
-      {/* Add Patient Card */}
+      {/* Edit Patient Card */}
       <div className={styles.addPatientCard} onClick={() => setShowForm(true)} style={{ cursor: 'pointer' }}>
         <div className={styles.cameraIcon}>
           <Camera size={16} color="#666" />
@@ -39,30 +39,15 @@ export default function PatientManagement() {
         </div>
 
         <div className={styles.addContent}>
-          <h4 className={styles.addTitle}>Add patient</h4>
-          <span className={styles.addSubtitle}>Register a new local patient</span>
+          <h4 className={styles.addTitle}>Edit patients</h4>
+          <span className={styles.addSubtitle}>Manage and update local records</span>
         </div>
       </div>
 
-      {/* Mini avatars */}
-      <div className={styles.miniAvatars}>
-        <div className={styles.avatarsRow}>
-          {recent.slice(0, 3).map((p, i) => (
-            <div key={p.patient_id} className={styles.avatar} style={{ backgroundColor: ['#2b5c56', '#7e57c2', '#ec407a'][i % 3] }}></div>
-          ))}
-          {recent.length === 0 && <div className={styles.avatarDots}>…</div>}
-        </div>
-        <div className={styles.avatarsInfo}>
-          <span className={styles.avatarsText}>
-            You have added {patients.length} patient{patients.length === 1 ? '' : 's'}
-          </span>
-          <Link href="/patients" className={styles.viewAllBtn}>view all <ChevronRight size={12} /></Link>
-        </div>
-      </div>
 
       {/* Patient List */}
       <div className={styles.listSection}>
-        <h4 className={styles.listTitle}>Patients <span>{patients.length} added</span></h4>
+        <h4 className={styles.listTitle}>Patients <span>{patients.length} registered</span></h4>
 
         <div className={styles.listItems}>
           {recent.length === 0 && (
@@ -89,7 +74,7 @@ export default function PatientManagement() {
 
         <div className={styles.listFooter}>
           <Link href="/patients" className={styles.viewAllBtn}>view all <ChevronRight size={12} /></Link>
-          <div className={styles.addBtn} onClick={() => setShowForm(true)}>add <Plus size={12} /></div>
+          <div className={styles.addBtn} onClick={() => setShowForm(true)}>edit <Plus size={12} /></div>
         </div>
       </div>
 
@@ -105,8 +90,8 @@ export default function PatientManagement() {
           <div className={styles.progressTrackDots}></div>
         </div>
         <div className={styles.expandContent}>
-          <h5 className={styles.expandTitle}>Grow your node</h5>
-          <p className={styles.expandDesc}>Register patients to contribute to federated rounds</p>
+          <h5 className={styles.expandTitle}>Manage your node</h5>
+          <p className={styles.expandDesc}>Edit and update patient records for federated rounds</p>
           <Link href="/patients" className={styles.viewAllBtn}>All patients <ChevronRight size={12} /></Link>
         </div>
         <div className={styles.plusIconLarge} onClick={() => setShowForm(true)}>
@@ -194,7 +179,7 @@ function AddPatientModal({
     <div className={formStyles.overlay} onClick={onClose}>
       <div className={formStyles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={formStyles.header}>
-          <h3>New Patient</h3>
+          <h3>Edit Patient</h3>
           <button type="button" className={formStyles.closeBtn} onClick={onClose}><X size={16} /></button>
         </div>
 

@@ -139,6 +139,8 @@ export interface LogMetadata {
   [key: string]: unknown;
 }
 
+export type LogStatus = 'pending' | 'confirmed' | 'failed' | 'preparing' | 'submitted' | 'received' | 'applied' | 'synced' | string;
+
 export interface LogEntry {
   log_id: string;
   node_id: string;
@@ -146,7 +148,7 @@ export interface LogEntry {
   direction: 'outgoing' | 'incoming';
   round: number;
   metadata: LogMetadata;
-  status: 'pending' | 'confirmed' | 'failed';
+  status: LogStatus;
   created_at: string;
 }
 
@@ -281,9 +283,9 @@ export const api = {
   },
 
   // --- PATIENTS ---
-  getPatients: async (): Promise<Patient[]> => {
-    const data = await fetcher<{ patients: Patient[] }>('/patients');
-    return data.patients;
+  getPatients: async () => {
+    const res = await fetcher<{ patients: Patient[] }>('/patients', { method: 'GET' });
+    return res.patients || [];
   },
 
   getPatient: async (id: string): Promise<Patient> => {

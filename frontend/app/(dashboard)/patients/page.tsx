@@ -66,9 +66,6 @@ export default function PatientsPage() {
           <h1 className={styles.title}>Patients Catalogue</h1>
           <p className={styles.subtitle}>Manage and explore all patients</p>
         </div>
-        <button className={styles.themeToggle}>
-          <Moon size={18} />
-        </button>
       </div>
 
       <PresentationBatchButton onAdded={load} />

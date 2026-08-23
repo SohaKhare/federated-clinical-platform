@@ -48,9 +48,6 @@ export default function Sidebar() {
       </nav>
 
       <div className={styles.bottomSection}>
-        <div className={styles.userProfile}>
-          <User size={20} />
-        </div>
         <button type="button" onClick={handleLogout} className={styles.uploadIcon} title="Logout">
           <LogOut size={16} />
         </button>

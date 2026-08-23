@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
-import type { File as MulterFile } from "multer";
+
+type MulterFile = Express.Multer.File;
 
 import {
   extractPatientFromReport as extractPatientFromReportRecord,

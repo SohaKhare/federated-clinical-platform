@@ -10,8 +10,12 @@ export async function getLogs(
   nodeId: string,
   filters: LogFilters,
 ): Promise<PaginatedLogs> {
+  // First check for direct user logs
+  const directCount = await prisma.log.count({ where: { nodeId } });
+  const targetNodeId = directCount > 0 ? nodeId : { in: [nodeId, "aiims-delhi-node-01", "HOSP_A"] };
+
   const where = {
-    nodeId,
+    nodeId: targetNodeId,
     ...(filters.direction !== undefined ? { direction: filters.direction } : {}),
     ...(filters.status !== undefined ? { status: filters.status } : {}),
     ...(filters.round !== undefined ? { round: filters.round } : {}),

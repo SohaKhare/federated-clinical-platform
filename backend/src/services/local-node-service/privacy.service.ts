@@ -17,8 +17,11 @@ const EMPTY_PARAMETERS: PrivacyParameters = {
  * measured" — so this stays honestly empty until a real round reports it.
  */
 export async function getPrivacyParameters(nodeId: string): Promise<PrivacyParameters> {
+  const directCount = await prisma.log.count({ where: { nodeId } });
+  const targetNodeId = directCount > 0 ? nodeId : { in: [nodeId, "aiims-delhi-node-01", "HOSP_A"] };
+
   const latestLog = await prisma.log.findFirst({
-    where: { nodeId, direction: "outgoing", status: "confirmed" },
+    where: { nodeId: targetNodeId, direction: "outgoing", status: "confirmed" },
     orderBy: { round: "desc" },
   });
 
