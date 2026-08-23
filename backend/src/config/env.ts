@@ -43,4 +43,9 @@ export const env = {
     clientSecret: requiredEnv("LOCAL_GOOGLE_CLIENT_SECRET"),
     redirectUri: `${backendUrl}/auth/google/callback`,
   },
+
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY,
+    model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+  },
 };
