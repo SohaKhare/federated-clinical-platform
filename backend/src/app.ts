@@ -11,6 +11,7 @@ import logRoutes from "./routes/log.routes.js";
 import researchRoutes from "./routes/research.routes.js";
 import privacyRoutes from "./routes/privacy.routes.js";
 import federatedRoutes from "./routes/federated.routes.js";
+import modelRoutes from "./routes/model.routes.js";
 import globalFederatedRoutes from "./routes/global-federated.routes.js";
 
 const app = express();
@@ -78,6 +79,8 @@ app.use("/research", researchRoutes);
 app.use("/privacy", privacyRoutes);
 
 app.use("/federated", federatedRoutes);
+
+app.use("/model", modelRoutes);
 
 app.use("/api/federated", globalFederatedRoutes);
 

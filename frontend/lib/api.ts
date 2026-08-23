@@ -204,6 +204,36 @@ export interface ResearchInsights {
   note: string;
 }
 
+export interface LocalModelInfo {
+  model_version: string | null;
+  status: 'untrained' | 'training' | 'ready' | 'failed';
+  last_trained_at: string | null;
+  sample_count: number | null;
+  latest_round: number | null;
+}
+
+export interface LocalModelRoundMetrics {
+  round: number;
+  direction: 'outgoing' | 'incoming';
+  status: string;
+  num_examples: number | null;
+  train_loss: number | null;
+  train_accuracy: number | null;
+  eval_loss: number | null;
+  eval_accuracy: number | null;
+  recorded_at: string;
+}
+
+export interface LocalModelMetrics {
+  latest_round: number | null;
+  accuracy: number | null;
+  loss: number | null;
+  precision: number | null;
+  recall: number | null;
+  f1_score: number | null;
+  rounds: LocalModelRoundMetrics[];
+}
+
 export interface FederatedNode {
   node_id: string;
   hospital_name: string;
@@ -341,11 +371,11 @@ export const api = {
   },
 
   // --- MODEL ---
-  getModelInfo: async () => {
-    return { version: 'clinical_model.pt', type: 'Flower FedAvg PyTorch MLP', parameters: 962 };
+  getModelInfo: async (): Promise<LocalModelInfo> => {
+    return fetcher<LocalModelInfo>('/model');
   },
-  getModelMetrics: async () => {
-    return { accuracy: null, precision: null, recall: null, f1: null };
+  getModelMetrics: async (): Promise<LocalModelMetrics> => {
+    return fetcher<LocalModelMetrics>('/model/metrics');
   },
 
   // --- FEDERATED (local node) ---

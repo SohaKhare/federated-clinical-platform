@@ -1,10 +1,38 @@
 import type { Request, Response } from "express";
 
-import { startLocalTraining } from "../../services/local-node-service/ml.service.js";
+import {
+  getLocalModelInfo,
+  getLocalModelMetrics,
+  startLocalTraining,
+} from "../../services/local-node-service/ml.service.js";
 import type { LocalTrainingStartInput } from "../../interfaces/model/federation-round.interface.js";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function getModelInfo(req: Request, res: Response) {
+  try {
+    const info = await getLocalModelInfo(req.session.user!.userId);
+
+    return res.json(info);
+  } catch (error) {
+    console.error("Local model info fetch error:", error);
+
+    return res.status(500).json({ message: "Unable to fetch local model info." });
+  }
+}
+
+export async function getModelMetrics(req: Request, res: Response) {
+  try {
+    const metrics = await getLocalModelMetrics(req.session.user!.userId);
+
+    return res.json(metrics);
+  } catch (error) {
+    console.error("Local model metrics fetch error:", error);
+
+    return res.status(500).json({ message: "Unable to fetch local model metrics." });
+  }
+}
 
 export async function startTraining(req: Request, res: Response) {
   const { roundId } = req.params;
