@@ -1,5 +1,5 @@
 import { Router } from "express";
-import multer from "multer";
+import multer, { type FileFilterCallback } from "multer";
 import type { NextFunction, Request, Response } from "express";
 
 import {
@@ -20,7 +20,7 @@ const MAX_REPORTS = 10;
 const reportUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024, files: MAX_REPORTS },
-  fileFilter: (_req, file, cb) => {
+  fileFilter: (_req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
     if (ACCEPTED_REPORT_MIME.test(file.mimetype)) {
       cb(null, true);
     } else {
@@ -40,18 +40,24 @@ const reportUpload = multer({
  */
 function uploadReports(req: Request, res: Response, next: NextFunction) {
   reportUpload.array("reports", MAX_REPORTS)(req, res, (error: unknown) => {
-    if (error instanceof multer.MulterError) {
-      let message: string;
+    if (error && typeof error === "object" && "code" in error) {
+      const multerError = error as { code?: string; message?: string };
 
-      if (error.code === "LIMIT_FILE_SIZE") {
-        message = "A report is too large. Maximum size is 10 MB per file.";
-      } else if (error.code === "LIMIT_FILE_COUNT") {
-        message = `Too many reports. Upload at most ${MAX_REPORTS} at once.`;
-      } else {
-        message = `Upload failed: ${error.message}`;
+      if (multerError.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({
+          message: "A report is too large. Maximum size is 10 MB per file.",
+        });
       }
 
-      return res.status(400).json({ message });
+      if (multerError.code === "LIMIT_FILE_COUNT") {
+        return res.status(400).json({
+          message: `Too many reports. Upload at most ${MAX_REPORTS} at once.`,
+        });
+      }
+
+      return res.status(400).json({
+        message: `Upload failed: ${multerError.message ?? "Unknown upload error."}`,
+      });
     }
 
     if (error instanceof Error) {

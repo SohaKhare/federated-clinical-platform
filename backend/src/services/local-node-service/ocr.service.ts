@@ -1,5 +1,3 @@
-import { GoogleGenAI } from "@google/genai";
-
 import { env } from "../../config/env.js";
 import type {
   CreatePatientInput,
@@ -21,20 +19,66 @@ export interface ReportExtractionResult {
   warnings: string[];
 }
 
-let geminiClient: GoogleGenAI | null = null;
-
-function getGeminiClient(): GoogleGenAI {
+async function generateGeminiContent(
+  fileBuffer: Buffer,
+  mimeType: string,
+): Promise<string> {
   if (!env.gemini.apiKey) {
     throw new OcrConfigurationError(
       "GEMINI_API_KEY is not configured. Set it in the backend environment to enable report OCR.",
     );
   }
 
-  if (!geminiClient) {
-    geminiClient = new GoogleGenAI({ apiKey: env.gemini.apiKey });
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${env.gemini.model}:generateContent?key=${encodeURIComponent(env.gemini.apiKey)}`;
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            {
+              inline_data: {
+                mime_type: mimeType,
+                data: fileBuffer.toString("base64"),
+              },
+            },
+            { text: EXTRACTION_PROMPT },
+          ],
+        },
+      ],
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: 0,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(
+      `Gemini OCR request failed (${response.status}): ${errorBody || response.statusText}`,
+    );
   }
 
-  return geminiClient;
+  const payload = (await response.json()) as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  };
+
+  const text = payload.candidates
+    ?.flatMap((candidate) => candidate.content?.parts ?? [])
+    .map((part) => part.text ?? "")
+    .join("")
+    .trim();
+
+  if (!text) {
+    throw new Error("Gemini returned an empty OCR response.");
+  }
+
+  return text;
 }
 
 /**
@@ -74,31 +118,8 @@ export async function extractPatientFromReport(
   mimeType: string,
 ): Promise<ReportExtractionResult> {
   const warnings: string[] = [];
-  const client = getGeminiClient();
 
-  const response = await client.models.generateContent({
-    model: env.gemini.model,
-    contents: [
-      {
-        role: "user",
-        parts: [
-          {
-            inlineData: {
-              mimeType,
-              data: fileBuffer.toString("base64"),
-            },
-          },
-          { text: EXTRACTION_PROMPT },
-        ],
-      },
-    ],
-    config: {
-      responseMimeType: "application/json",
-      temperature: 0,
-    },
-  });
-
-  const text = response.text;
+  const text = await generateGeminiContent(fileBuffer, mimeType);
 
   if (!text) {
     warnings.push(

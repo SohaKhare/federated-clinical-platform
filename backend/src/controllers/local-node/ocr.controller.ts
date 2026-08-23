@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import type { File as MulterFile } from "multer";
 
 import {
   extractPatientFromReport as extractPatientFromReportRecord,
@@ -14,7 +15,7 @@ interface ReportResult {
 }
 
 export async function extractPatientFromReport(req: Request, res: Response) {
-  const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+  const files = (req.files as MulterFile[] | undefined) ?? [];
 
   if (files.length === 0) {
     return res.status(400).json({
