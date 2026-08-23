@@ -8,7 +8,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className={styles.sidebarWrapper}>
         <Sidebar />
       </div>
-      
+
       <div className={styles.mainWrapper}>
         <div className={styles.headerWrapper}>
           <Header />

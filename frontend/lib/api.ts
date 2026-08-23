@@ -1,5 +1,23 @@
 // Mock API Service for Local Node Endpoints
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+async function fetcher(endpoint: string, options: RequestInit = {}) {
+  const res = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    credentials: 'include',
+  });
+
+  if (!res.ok) {
+    throw new Error(await res.text() || 'An error occurred');
+  }
+  return res.json();
+}
+
 export const api = {
   // --- AUTH ---
   login: async (credentials: any) => {
@@ -19,12 +37,7 @@ export const api = {
 
   // --- PATIENTS ---
   getPatients: async () => {
-    return [
-      { id: '1024', name: 'Patient A', risk: 'High', lastEvent: '2026-08-20' },
-      { id: '1025', name: 'Patient B', risk: 'Low', lastEvent: '2026-08-21' },
-      { id: '1026', name: 'Patient C', risk: 'Medium', lastEvent: '2026-08-22' },
-      { id: '1027', name: 'Patient D', risk: 'Low', lastEvent: '2026-08-19' },
-    ];
+    return fetcher('/api/patients', { method: 'GET' });
   },
   getPatientDetails: async (id: string) => {
     return { id, name: `Patient ${id}`, dob: '1980-01-01', conditions: ['Hypertension'] };
@@ -43,7 +56,7 @@ export const api = {
   getModelMetrics: async () => {
     return { accuracy: 0.94, precision: 0.92, recall: 0.95, f1: 0.93 };
   },
-  
+
   // --- FEDERATED ---
   getFederatedStatus: async () => {
     return { status: 'Training', connectedNodes: 12, uptime: '48h' };

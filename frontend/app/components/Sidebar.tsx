@@ -23,9 +23,9 @@ export default function Sidebar() {
         <Link href="/heatmap" className={`${styles.iconWrapper} ${pathname.startsWith('/heatmap') ? styles.active : ''}`}>
           <Map size={20} />
         </Link>
-        <div className={styles.iconWrapper}>
-          <Key size={20} />
-        </div>
+        <Link href="/patients" className={`${styles.iconWrapper} ${pathname.startsWith('/patients') ? styles.active : ''}`}>
+          <User size={20} />
+        </Link>
         <div className={styles.iconWrapper}>
           <Settings size={20} />
         </div>
