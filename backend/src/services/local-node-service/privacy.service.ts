@@ -11,6 +11,12 @@ const EMPTY_PARAMETERS: PrivacyParameters = {
 };
 
 /**
+ * Demo hospital shown to any account with zero real activity of its own —
+ * see DEMO_FALLBACK_NODE_ID in log.service.ts for why it's a real user id.
+ */
+const DEMO_FALLBACK_NODE_ID = "1bb53b66-de9d-432b-8851-9cedd26f1ea9";
+
+/**
  * Reads DP metadata from this hospital's latest confirmed outgoing log
  * rather than inventing config values. Per API.md: "do not describe an
  * update as private unless the corresponding mechanism is enabled and
@@ -18,7 +24,7 @@ const EMPTY_PARAMETERS: PrivacyParameters = {
  */
 export async function getPrivacyParameters(nodeId: string): Promise<PrivacyParameters> {
   const directCount = await prisma.log.count({ where: { nodeId } });
-  const targetNodeId = directCount > 0 ? nodeId : { in: [nodeId, "aiims-delhi-node-01", "HOSP_A"] };
+  const targetNodeId = directCount > 0 ? nodeId : { in: [nodeId, DEMO_FALLBACK_NODE_ID] };
 
   const latestLog = await prisma.log.findFirst({
     where: { nodeId: targetNodeId, direction: "outgoing", status: "confirmed" },

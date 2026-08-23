@@ -117,6 +117,32 @@ Expected unauthenticated response `401`:
 }
 ```
 
+### POST `/auth/logout`
+
+Purpose: Destroy the current session.
+
+Input: None. Not gated by `requireAuth` — safe to call even with no active
+session.
+
+Expected response `200` (real captured output):
+
+```json
+{
+  "message": "Logged out successfully."
+}
+```
+
+Also clears the `connect.sid` cookie (real captured `Set-Cookie` header):
+
+```text
+connect.sid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT
+```
+
+Calling `GET /auth/me` with the now-destroyed session cookie afterward
+correctly returns `401` (verified live). Calling `POST /auth/logout` with no
+session cookie at all still returns `200` with the same message — it's
+idempotent rather than requiring an active session first.
+
 ### POST `/auth/onboarding`
 
 Auth: Authenticated local user only.
@@ -496,6 +522,52 @@ Reserved-event-type response `400` (real captured output, attempting
 }
 ```
 
+### GET `/patients/presentation-batch`
+
+Purpose: Return 10–20 held-out, de-identified demo rows from
+`federated/data/heart_presentation_pool.csv`, scoped to a stable
+per-hospital partition (`hash(hospitalId) % 3`) and shuffled/sliced fresh
+on every call — a live-demo prop, not real patient data.
+
+Input: Valid local session cookie required.
+
+Expected response `200` (real captured output, truncated to 3 of 10 rows —
+`patients.length` varies 10–20 between calls):
+
+```json
+{
+  "hospital_id": 1,
+  "patients": [
+    {
+      "source_row": 127,
+      "age": 54,
+      "sex": "1.0",
+      "symptoms": ["clinical screening"],
+      "heart_disease": true
+    },
+    {
+      "source_row": 15,
+      "age": 57,
+      "sex": "1.0",
+      "symptoms": ["clinical screening"],
+      "heart_disease": false
+    },
+    {
+      "source_row": 31,
+      "age": 60,
+      "sex": "1.0",
+      "symptoms": ["clinical screening"],
+      "heart_disease": true
+    }
+  ]
+}
+```
+
+Note `sex` is the raw dataset encoding (`"1.0"`/`"0.0"`), not the
+`"male"`/`"female"` strings used elsewhere in the API — this endpoint reads
+straight from the CSV without normalizing it, unlike the OCR/patient
+endpoints above.
+
 ### POST `/patients/ocr`
 
 Auth: Authenticated local user only. Verified live against the real Gemini
@@ -607,7 +679,7 @@ Invalid query response `400` (real captured output, `?pageSize=99999`):
 
 ```json
 {
-  "message": "Invalid query. direction must be 'outgoing' or 'incoming', status must be 'pending', 'confirmed', or 'failed', round must be a non-negative integer, page must be a positive integer, and pageSize must be a positive integer up to 200."
+  "message": "Invalid query. direction must be 'outgoing' or 'incoming', status must be 'pending', 'confirmed', 'failed', 'preparing', 'submitted', 'received', 'applied', or 'synced', round must be a non-negative integer, page must be a positive integer, and pageSize must be a positive integer up to 200."
 }
 ```
 
@@ -1041,6 +1113,63 @@ callback URL to the ML service. Patient records are never sent.
 
 Expected response: `202` with the ML service's accepted-run response.
 
+### POST `/api/federated/rounds/start`
+
+Auth: Authenticated global user only.
+
+Purpose: Start a new federated round against onboarded local hospitals.
+Writes an `outgoing`/`preparing` log row for each targeted hospital and
+persists the round snapshot.
+
+Input (all fields optional — omit `targetNodeIds` to target every onboarded
+local hospital):
+
+```json
+{
+  "targetNodeIds": ["local-user-uuid-1", "local-user-uuid-2"]
+}
+```
+
+Expected response `202` (real captured output, 2 targeted hospitals):
+
+```json
+{
+  "message": "Federated round started.",
+  "round": {
+    "round_id": "14cffeef-2d20-4a08-8824-fda6a42565b3",
+    "round": 1,
+    "status": "starting",
+    "created_at": "2026-08-23T02:56:06.694Z",
+    "updated_at": "2026-08-23T02:56:06.694Z",
+    "target_node_ids": ["46b26dd6-84d4-4e68-a4c1-841e7cda2113", "c3a83530-4cf4-4cb2-bd1c-0d76b2b491ee"],
+    "nodes": [
+      {
+        "node_id": "46b26dd6-84d4-4e68-a4c1-841e7cda2113",
+        "hospital_name": "Hospital A",
+        "status": "preparing",
+        "last_event_at": "2026-08-23T02:56:06.694Z",
+        "events": [{ "status": "preparing", "timestamp": "2026-08-23T02:56:06.694Z", "details": "Round started." }]
+      },
+      {
+        "node_id": "c3a83530-4cf4-4cb2-bd1c-0d76b2b491ee",
+        "hospital_name": "Hospital B",
+        "status": "preparing",
+        "last_event_at": "2026-08-23T02:56:06.694Z",
+        "events": [{ "status": "preparing", "timestamp": "2026-08-23T02:56:06.694Z", "details": "Round started." }]
+      }
+    ],
+    "ready_nodes": 0,
+    "synced_nodes": 0
+  }
+}
+```
+
+`targetNodeIds` containing an unknown node ID → `404` with
+`"Unknown local node(s): <id>"`. No eligible local hospitals at all → `500`
+(`"No eligible local hospitals are available for a federated round."`
+surfaces as a generic 500 via `mapFederationError`, since it isn't one of
+the specifically-mapped error messages).
+
 ### GET `/api/federated/rounds/:roundId`
 
 Auth: Authenticated global user only.
@@ -1101,6 +1230,55 @@ Input uses the existing callback format:
 The callback accepts only protocol data and rejects a missing or incorrect key
 with `401`.
 
+### POST `/api/federated/rounds/:roundId/broadcast`
+
+Auth: Authenticated global user only.
+
+Purpose: Broadcast aggregated weights to nodes that have already submitted
+an update for this round (status `received` or `submitted`). Nodes not yet
+ready are skipped rather than erroring the whole call.
+
+Input (all fields optional — omit `nodeIds` to broadcast to every node
+targeted by the round):
+
+```json
+{
+  "nodeIds": ["local-user-uuid-1"],
+  "weights": { "layer1": [0.1, 0.2] },
+  "notes": "Round 1 aggregated weights"
+}
+```
+
+Expected response `202` (real captured output — one of two round
+participants had already submitted via the callback above, the other
+hadn't):
+
+```json
+{
+  "message": "Global weights broadcast completed.",
+  "round": {
+    "round_id": "14cffeef-2d20-4a08-8824-fda6a42565b3",
+    "round": 1,
+    "status": "completed",
+    "nodes": [
+      { "node_id": "46b26dd6-84d4-4e68-a4c1-841e7cda2113", "hospital_name": "Hospital A", "status": "synced", "...": "..." },
+      { "node_id": "c3a83530-4cf4-4cb2-bd1c-0d76b2b491ee", "hospital_name": "Hospital B", "status": "preparing", "...": "..." }
+    ],
+    "ready_nodes": 0,
+    "synced_nodes": 1
+  },
+  "broadcasted_nodes": ["46b26dd6-84d4-4e68-a4c1-841e7cda2113"],
+  "skipped_nodes": []
+}
+```
+
+Note `round.status` is `"completed"` only when every targeted node ended up
+broadcasted; it's `"partial"` if some were skipped (still not ready) — that
+distinction wasn't hit in this capture since `nodeIds` was scoped to just
+the one ready node. Unknown/nonexistent `roundId` → `404`
+(`"Round not found."`). No requested node is ready yet → `409`
+(`"No participating nodes have completed training yet."`).
+
 ## To be built
 
 These items are planned but are not currently available through the backend.
@@ -1121,11 +1299,6 @@ Express backend:
   meant to be on, so there's nothing honest to report here (distinct from
   `GET /privacy/parameters`, which is implemented and reports real numbers
   once available).
-
-Note: `POST /api/federated/rounds/start` and
-`POST /api/federated/rounds/:roundId/broadcast` are implemented and
-verified — see the "Federation and ML bridge" section above, not listed
-here anymore.
 
 ### Research and operations APIs
 

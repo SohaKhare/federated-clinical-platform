@@ -88,11 +88,17 @@ export async function getNode(nodeId: string): Promise<NodeDetail | null> {
   };
 }
 
+/**
+ * Demo hospital shown to any account with zero real activity of its own —
+ * see DEMO_FALLBACK_NODE_ID in log.service.ts for why it's a real user id.
+ */
+const DEMO_FALLBACK_NODE_ID = "1bb53b66-de9d-432b-8851-9cedd26f1ea9";
+
 export async function getNodeStatus(
   nodeId: string,
 ): Promise<NodeStatusInfo | null> {
   const directCount = await prisma.log.count({ where: { nodeId } });
-  const targetNodeId = directCount > 0 ? nodeId : { in: [nodeId, "aiims-delhi-node-01", "HOSP_A"] };
+  const targetNodeId = directCount > 0 ? nodeId : { in: [nodeId, DEMO_FALLBACK_NODE_ID] };
 
   const [user, latestLog, roundAggregate] = await Promise.all([
     findHospitalUser(nodeId),

@@ -6,13 +6,20 @@ import type {
   PaginatedLogs,
 } from "../../interfaces/model/log.interface.js";
 
+/**
+ * Demo hospital shown to any account with zero real activity of its own, so
+ * an empty account still has something to display. Points at the real
+ * "AIIMS Delhi" user row (not a made-up node id) so the fallback data is
+ * actually backed by a real hospital record.
+ */
+const DEMO_FALLBACK_NODE_ID = "1bb53b66-de9d-432b-8851-9cedd26f1ea9";
+
 export async function getLogs(
   nodeId: string,
   filters: LogFilters,
 ): Promise<PaginatedLogs> {
-  // First check for direct user logs
   const directCount = await prisma.log.count({ where: { nodeId } });
-  const targetNodeId = directCount > 0 ? nodeId : { in: [nodeId, "aiims-delhi-node-01", "HOSP_A"] };
+  const targetNodeId = directCount > 0 ? nodeId : { in: [nodeId, DEMO_FALLBACK_NODE_ID] };
 
   const where = {
     nodeId: targetNodeId,

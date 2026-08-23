@@ -79,8 +79,6 @@ app.use("/privacy", privacyRoutes);
 
 app.use("/federated", federatedRoutes);
 
-app.use("/api", demoRoutes);
-
 app.use("/api/federated", globalFederatedRoutes);
 
 export default app;
