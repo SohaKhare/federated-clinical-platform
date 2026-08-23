@@ -496,6 +496,45 @@ Reserved-event-type response `400` (real captured output, attempting
 }
 ```
 
+### POST `/patients/ocr`
+
+Auth: Authenticated local user only. Verified live against the real Gemini
+API (not mocked) — see `API.md`'s `POST /patients/ocr` section for the full
+request/response contract; this note just records what was actually tested.
+
+A synthetic one-page PDF report ("Name: Meera Iyer / Age: 47 Sex: Female /
+Presenting complaints: chest pain, shortness of breath / Diagnosis:
+hypertension / Blood pressure: 145/95 mmHg / Diabetic: No") was uploaded and
+correctly extracted end to end (real captured output):
+
+```json
+{
+  "results": [
+    {
+      "filename": "report.pdf",
+      "draft": {
+        "name": "Meera Iyer",
+        "age": 47,
+        "sex": "female",
+        "symptoms": ["chest pain", "shortness of breath"],
+        "diagnosed_diseases": ["hypertension"],
+        "health_conditions": { "blood_pressure": "145/95 mmHg", "diabetic": false }
+      },
+      "warnings": []
+    }
+  ]
+}
+```
+
+`POST /patients/ocr` with no files attached returns `400` (real captured
+output):
+
+```json
+{
+  "message": "No reports uploaded. Attach one or more images/PDFs as the 'reports' form field."
+}
+```
+
 ### Local aggregates and records
 
 Auth: Authenticated local user only.

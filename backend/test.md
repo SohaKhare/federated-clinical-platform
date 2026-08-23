@@ -3,11 +3,34 @@
 **Date:** 2026-08-23
 **Scope:** `federated-clinical-platform/backend`
 **Accounts under test:** 2x `local` role (hospital/clinic nodes) + 1x `global` role (federated server node)
-**Status: All fixed and re-verified — 43/43 checks pass.**
+**Status: 53/53 checks pass** (43 from the first two passes + 10 from the pass below, plus a live Gemini OCR extraction).
 
 ## Summary
 
-First pass found auth/RBAC/data-isolation solid, but the global-node federated-round lifecycle (`/api/federated/rounds/*`) was broken end-to-end by two bugs — one in application code, one in database drift. Both are now fixed and the full round lifecycle (start → callback → broadcast) has been re-verified against the live database.
+First pass found auth/RBAC/data-isolation solid, but the global-node federated-round lifecycle (`/api/federated/rounds/*`) was broken end-to-end by two bugs — one in application code, one in database drift. Both are fixed and re-verified. A later pass covers the remaining patient endpoints (events/PATCH/presentation-batch) and the new Gemini-backed report OCR feature, plus the two new node-health endpoints added since. Everything in scope now passes.
+
+## Pass 3 — Patient events/PATCH/presentation-batch + report OCR (10/10, plus 1 live OCR extraction)
+
+| # | Check | Result |
+|---|---|---|
+| 1 | `POST /patients` creates a patient | PASS |
+| 2 | `POST /patients/:id/events` creates a custom event (`treatment`) | PASS |
+| 3 | `POST /patients/:id/events` rejects a reserved `eventType` (`patient_updated`) → `400` | PASS |
+| 4 | `GET /patients/:id/events` returns chronological history ordered by `occurred_at` | PASS |
+| 5 | `PATCH /patients/:id` updates direct fields (`name`, `age`) | PASS |
+| 6 | `PATCH /patients/:id` on clinical fields (`symptoms`, `health_conditions`) updates the merged view | PASS |
+| 7 | The clinical PATCH above produces a new `patient_updated` event, visible via `GET /patients/:id/events` | PASS |
+| 8 | `PATCH /patients/:id` rejects a disallowed field (`hospital_id`) → `400` | PASS |
+| 9 | `GET /patients/presentation-batch` returns 10–20 de-identified rows from `heart_presentation_pool.csv` | PASS |
+| 10 | `POST /patients/ocr` with no files → `400` | PASS |
+| — | `POST /patients/ocr` real extraction: a synthetic PDF report ("Meera Iyer, 47, Female, chest pain, shortness of breath, hypertension, BP 145/95") sent through a live Gemini call, correctly extracted every field (`name`, `age: 47`, `sex: "female"`, both symptoms, the diagnosis, and blood pressure) | **PASS — verified with a real API call**, not repeated on the second run to avoid burning extra quota |
+
+One test-data note: the first attempt at check #4/#7 initially "failed" because the `treatment` event was given a backdated `occurredAt` (3 days before the patient was created) — the API correctly sorted it first by `occurred_at` ascending, exactly as documented. That was a bad test assumption, not a bug; fixed by letting `occurredAt` default to server time and re-run to a clean pass.
+
+## Node health endpoints (added and verified this session)
+
+- `GET /nodes/:id/health` — single-node ping-style check (online/offline via a 5-minute activity window). Verified: 401 anon, 403 local, 404 unknown, 400 bad ID, and correct `online: true → false` transition around the 5-minute window.
+- `GET /nodes/health` — paginated version across all local nodes, `page`/`pageSize` query params, `400` on bad pagination, correct multi-page results verified with 3 seeded hospitals across 2 pages.
 
 ## Setup
 
