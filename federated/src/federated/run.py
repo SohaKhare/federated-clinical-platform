@@ -4,7 +4,7 @@ from federated.client_app import app as client_app
 from federated.server_app import app as server_app
 
 
-def main() -> None:
+def run_federated() -> None:
     run_simulation(
         server_app=server_app,
         client_app=client_app,
@@ -12,3 +12,7 @@ def main() -> None:
         backend_config={"client_resources": {"num_cpus": 1}},
         verbose_logging=True,
     )
+
+
+def main() -> None:
+    run_federated()

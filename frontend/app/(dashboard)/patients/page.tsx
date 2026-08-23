@@ -1,9 +1,21 @@
 "use client";
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import styles from './patients.module.css';
 import { api, type Patient } from '@/lib/api';
 import { Search, Moon } from 'lucide-react';
+import PresentationBatchButton from '../../components/PresentationBatchButton';
+
+interface Patient {
+  patient_id: string;
+  hospital_id: string;
+  name: string;
+  age: number;
+  sex: string;
+  contributed_to_round: number;
+  updated_at: string;
+  created_at: string;
+}
 
 export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -58,6 +70,8 @@ export default function PatientsPage() {
           <Moon size={18} />
         </button>
       </div>
+
+      <PresentationBatchButton onAdded={load} />
 
       <div className={styles.controls}>
         <div className={styles.searchWrapper}>

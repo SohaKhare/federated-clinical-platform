@@ -28,3 +28,30 @@ export async function startLocalTraining(
 
   return response.json();
 }
+
+export async function startFederatedTraining(input: {
+  roundId: string;
+  round: number;
+  nodeIds: string[];
+}) {
+  const response = await fetch(`${env.federatedUrl}/federation/runs`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Federation-Key": env.federationSharedSecret,
+    },
+    body: JSON.stringify({
+      round_id: input.roundId,
+      round: input.round,
+      node_ids: input.nodeIds,
+      callback_url: `${env.backendUrl}/api/federated/rounds/${input.roundId}/callback`,
+      config: { "num-server-rounds": 3 },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`ML service returned status ${response.status}.`);
+  }
+
+  return response.json();
+}

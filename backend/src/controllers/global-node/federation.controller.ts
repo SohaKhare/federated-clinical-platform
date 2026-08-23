@@ -12,6 +12,7 @@ import type {
   FederatedRoundCallbackInput,
   FederatedRoundStartInput,
 } from "../../interfaces/model/federation-round.interface.js";
+import { startFederatedTraining } from "../../services/local-node-service/ml.service.js";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -31,6 +32,20 @@ export async function startFederatedRoundController(
 
   try {
     const result = await startFederatedRound(input);
+
+    try {
+      await startFederatedTraining({
+        roundId: result.round.round_id,
+        round: result.round.round,
+        nodeIds: result.round.target_node_ids,
+      });
+    } catch (error) {
+      console.error("Federated service start error:", error);
+      return res.status(502).json({
+        message: "Round created, but the Flower service could not be started.",
+        round: result.round,
+      });
+    }
 
     return res.status(202).json(result);
   } catch (error) {

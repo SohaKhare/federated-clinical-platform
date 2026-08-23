@@ -19,6 +19,7 @@ federated = "federated:main"
 prepare-data = "federated.prepare_data:main"
 prepare-xray-data = "federated.prepare_xray_data:main"
 run-federated = "federated.run:main"
+federated-service = "federated.service:main"
 run-xray-federated = "federated.xray_run:main"
 
 [build-system]

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { api } from '../../lib/api';
 import styles from './PresentationBatchButton.module.css';
 
-export default function PresentationBatchButton() {
+export default function PresentationBatchButton({ onAdded }: { onAdded?: () => void }) {
   const [status, setStatus] = useState('');
   const [addedCount, setAddedCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -22,6 +22,7 @@ export default function PresentationBatchButton() {
       const batch = await api.getPresentationBatch() as { hospital_id: number; patients: unknown[] };
       localStorage.setItem(key, 'loaded');
       setAddedCount(batch.patients.length);
+      onAdded?.();
       setStatus(`${batch.patients.length} real held-out patients added for Hospital ${batch.hospital_id}.`);
     } catch (error) {
       console.error('Presentation batch error:', error);

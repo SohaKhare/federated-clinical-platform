@@ -1,6 +1,10 @@
 import styles from './SharedCards.module.css';
 
-export default function ModelPage() {
+export default async function ModelPage() {
+  const modelInfo = await api.getModelInfo();
+  const metrics = await api.getModelMetrics();
+  const formatMetric = (value: number | null) => value === null ? '—' : `${(value * 100).toFixed(1)}%`;
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -12,10 +16,20 @@ export default function ModelPage() {
 
       <div className={styles.grid}>
         <div className={styles.card}>
-          <span className={styles.cardTitle}>Status</span>
-          <span style={{ fontSize: '0.85rem', color: '#666' }}>
-            No trained model version exists yet — federated training has not produced one.
-          </span>
+          <span className={styles.cardTitle}>Accuracy</span>
+          <span className={styles.cardValue}>{formatMetric(metrics.accuracy)}</span>
+        </div>
+        <div className={styles.card}>
+          <span className={styles.cardTitle}>Precision</span>
+          <span className={styles.cardValue}>{formatMetric(metrics.precision)}</span>
+        </div>
+        <div className={styles.card}>
+          <span className={styles.cardTitle}>Recall</span>
+          <span className={styles.cardValue}>{formatMetric(metrics.recall)}</span>
+        </div>
+        <div className={styles.card}>
+          <span className={styles.cardTitle}>F1 Score</span>
+          <span className={styles.cardValue}>{formatMetric(metrics.f1)}</span>
         </div>
       </div>
     </div>

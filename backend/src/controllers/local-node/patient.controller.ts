@@ -21,6 +21,8 @@ import {
   type CreatePatientEventInput,
 } from "../../interfaces/model/patient-event.interface.js";
 
+const dailyPresentationBatches = new Map<string, Patient[]>();
+
 /**
  * requireAuth + requireRole("local") run before every handler in this file,
  * so req.session.user is always present here.
@@ -76,6 +78,16 @@ export async function getPatients(req: Request, res: Response) {
 
 export async function getPresentationBatch(req: Request, res: Response) {
   try {
+    const day = new Date().toISOString().slice(0, 10);
+    const batchKey = `${getHospitalId(req)}:${day}`;
+    const existingBatch = dailyPresentationBatches.get(batchKey);
+    if (existingBatch) {
+      return res.json({
+        hospital_id: getHospitalId(req),
+        patients: existingBatch.map(stripHospitalId),
+      });
+    }
+
     const poolPath = path.resolve(
       path.dirname(fileURLToPath(import.meta.url)),
       "../../../../federated/data/heart_presentation_pool.csv",
@@ -93,16 +105,24 @@ export async function getPresentationBatch(req: Request, res: Response) {
     const available = rows.filter((row) => Number(row[hospitalIndex]) === hospitalId);
     const batch = available.sort(() => Math.random() - 0.5).slice(0, 10 + Math.floor(Math.random() * 11));
 
-    return res.json({
-      hospital_id: hospitalId,
-      patients: batch.map((row) => ({
+    const patients = await Promise.all(batch.map((row) => createPatientRecord({
+      name: `Demo patient ${row[index("_source_row")]}`,
+      age: Number(row[index("age")]),
+      sex: row[index("sex")] === "1" ? "male" : "female",
+      symptoms: [row[index("cp")] === "4" ? "chest pain" : "clinical screening"],
+      diagnosed_diseases: Number(row[index("target")]) > 0 ? ["heart disease"] : [],
+      health_conditions: {
         source_row: Number(row[index("_source_row")]),
-        age: Number(row[index("age")]),
-        sex: row[index("sex")],
-        symptoms: [row[index("cp")] === "4" ? "chest pain" : "clinical screening"],
-        heart_disease: Number(row[index("target")]) > 0,
-      })),
-    });
+        trestbps: Number(row[index("trestbps")]),
+        chol: Number(row[index("chol")]),
+        thalach: Number(row[index("thalach")]),
+        oldpeak: Number(row[index("oldpeak")]),
+        demo_record: true,
+      },
+    }, getHospitalId(req))));
+    dailyPresentationBatches.set(batchKey, patients);
+
+    return res.json({ hospital_id: hospitalId, patients: patients.map(stripHospitalId) });
   } catch (error) {
     console.error("Presentation batch error:", error);
     return res.status(500).json({ message: "Unable to load presentation patients." });

@@ -159,6 +159,9 @@ export interface FederationState {
   latest_round_seen: number;
   last_direction: 'outgoing' | 'incoming';
   last_status: 'pending' | 'confirmed' | 'failed';
+  role: 'local' | 'global';
+  hospitalName?: string;
+  onboarded?: boolean;
 }
 
 export interface NodeStatus {
@@ -333,6 +336,12 @@ export const api = {
   // --- LOGS ---
   getLogs: async (params: { direction?: string; status?: string; round?: number; page?: number; pageSize?: number } = {}): Promise<LogsResponse> => {
     return fetcher<LogsResponse>(`/logs${qs(params)}`);
+  // --- MODEL ---
+  getModelInfo: async () => {
+    return { version: 'clinical_model.pt', type: 'Flower FedAvg PyTorch MLP', parameters: 962 };
+  },
+  getModelMetrics: async () => {
+    return { accuracy: null, precision: null, recall: null, f1: null };
   },
 
   // --- FEDERATED (local node) ---
@@ -346,6 +355,26 @@ export const api = {
       body: JSON.stringify(input),
     });
   },
+  // --- FEDERATED ---
+  getFederatedStatus: async () => {
+    return fetcher('/federated/status', { method: 'GET' });
+  },
+  getFederatedRound: async () => {
+    const data = await fetcher('/api/federated/rounds', { method: 'GET' });
+    return data.rounds?.[0] ?? null;
+  },
+
+  getGlobalRounds: async () => fetcher('/api/federated/rounds', { method: 'GET' }),
+  startGlobalRound: async (targetNodeIds?: string[]) => fetcher('/api/federated/rounds/start', {
+    method: 'POST',
+    body: JSON.stringify(targetNodeIds ? { targetNodeIds } : {}),
+  }),
+  getGlobalRound: async (roundId: string) => fetcher(`/api/federated/rounds/${roundId}`, { method: 'GET' }),
+  broadcastGlobalWeights: async (roundId: string) => fetcher(`/api/federated/rounds/${roundId}/broadcast`, {
+    method: 'POST',
+    body: JSON.stringify({ notes: 'Global Flower model broadcast to participating hospitals.' }),
+  }),
+  getNodes: async () => fetcher('/nodes', { method: 'GET' }),
 
   // --- PRIVACY ---
   getPrivacyParameters: async (): Promise<PrivacyParameters> => {
