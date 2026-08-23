@@ -35,10 +35,77 @@ The Local Node runs inside a participating hospital. It can access that hospital
 | `GET` | `/patients` | List authorized local patients with pagination and filters. |
 | `GET` | `/patients/presentation-batch` | Return 10–20 held-out de-identified demo rows for the logged-in hospital. |
 | `POST` | `/patients` | Create a local patient record. |
+| `POST` | `/patients/ocr` | Extract reviewable patient drafts from one or more uploaded report images/PDFs (OCR via Gemini). Does **not** save. |
 | `GET` | `/patients/{id}` | Return one local patient's profile. |
 | `PATCH` | `/patients/{id}` | Update a patient and append a before/current/change event snapshot. |
 | `GET` | `/patients/{id}/events` | Return that patient's chronological clinical events. |
 | `POST` | `/patients/{id}/events` | Append a clinical event without overwriting history. |
+
+#### Report OCR — `POST /patients/ocr`
+
+Turns uploaded report scans into reviewable patient drafts. The clinician reviews/edits each draft in the UI, then saves it with a normal `POST /patients`. This endpoint never writes to the database.
+
+- **Auth:** session cookie + `local` role (same guard as every other `/patients` route). Call it with `credentials: "include"`.
+- **Engine:** each file is sent directly to Google Gemini, which reads the document and maps it onto the patient schema. Requires `GEMINI_API_KEY` on the backend, or the endpoint returns `503`.
+
+**Request** — `multipart/form-data`:
+
+| Field | Value |
+| --- | --- |
+| `reports` | One or more files (repeat the field per file). Up to **10** files, **10 MB** each. |
+
+Accepted types: PNG, JPG, WEBP, BMP, TIFF, PDF.
+
+```js
+// Frontend example
+const form = new FormData();
+for (const file of selectedFiles) form.append("reports", file);
+
+const res = await fetch(`${API_BASE}/patients/ocr`, {
+  method: "POST",
+  body: form,           // do NOT set Content-Type; the browser adds the boundary
+  credentials: "include",
+});
+const { results } = await res.json();
+```
+
+**Response `200`** — one result per uploaded file (order matches upload). Each `draft` matches the `POST /patients` body shape (`age` may be `null` when the report omits it, so a clinician must set it before saving):
+
+```json
+{
+  "results": [
+    {
+      "filename": "report1.jpg",
+      "draft": {
+        "name": "Jane Doe",
+        "age": 54,
+        "sex": "female",
+        "symptoms": ["chest pain", "shortness of breath"],
+        "diagnosed_diseases": ["hypertension"],
+        "health_conditions": { "blood_pressure": "150/95 mmHg", "diabetic": true }
+      },
+      "warnings": []
+    },
+    {
+      "filename": "report2.pdf",
+      "draft": { "name": "", "age": null, "sex": "male", "symptoms": [], "diagnosed_diseases": [], "health_conditions": {} },
+      "warnings": ["Age was not found in the report — set it before saving."]
+    },
+    {
+      "filename": "corrupt.png",
+      "draft": null,
+      "warnings": [],
+      "error": "Unable to extract patient data from this report."
+    }
+  ]
+}
+```
+
+A per-file failure produces a `draft: null` entry with an `error` string rather than failing the whole batch. Error responses use the shared envelope `{ "message": string }`:
+
+- `400` — no files, unsupported type, a file over 10 MB, or more than 10 files.
+- `503` — `GEMINI_API_KEY` is not configured on the backend.
+- `500` — unexpected extraction failure.
 
 ### Local Model
 
@@ -282,7 +349,7 @@ At the time this document was written:
 - Backend scaffold, sessions, Google OAuth, and `local`/`global` role guards exist.
 - `/health` and two protected demo routes exist: `/api/federated/status` and `/api/hospital/summary`.
 - Auth endpoints implemented: `POST /auth/logout`, `GET /auth/me`, plus `GET /auth/google`, `GET /auth/google/callback`, and a local-only onboarding route.
-- All Local patient endpoints implemented: `GET/POST /patients`, `PATCH/GET /patients/{id}`, `GET/POST /patients/{id}/{events}`.
+- All Local patient endpoints implemented: `GET/POST /patients`, `PATCH/GET /patients/{id}`, `GET/POST /patients/{id}/{events}`, plus `POST /patients/ocr` (Gemini-backed report OCR → reviewable drafts; requires `GEMINI_API_KEY`).
 - Global Node endpoints implemented: `GET /nodes`, `GET /nodes/{id}`, `GET /nodes/{id}/status`, `GET /nodes/{id}/metrics`. Nodes are derived from onboarded local users; participation data comes from the logs table until real rounds exist.
 - CORS is configured on the backend against a comma-separated origin allowlist (`CORS_ORIGINS`, falling back to `FRONTEND_URL`) with credentials enabled.
 - The Python federated package trains a heart-disease classifier via Flower simulation (`run-federated`: 3 clients, FedAvg, saves `models/clinical_model.pt`); there is no HTTP server yet, so the Backend ↔ Federated bridge endpoints above are still planned.
