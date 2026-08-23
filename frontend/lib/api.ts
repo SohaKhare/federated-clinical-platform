@@ -434,8 +434,9 @@ export const api = {
   },
 
   // --- GLOBAL NODE ---
-  getNodes: async (): Promise<{ nodes: FederatedNode[] }> => {
-    return fetcher<{ nodes: FederatedNode[] }>('/nodes');
+  getNodes: async (): Promise<FederatedNode[]> => {
+    const data = await fetcher<{ nodes: FederatedNode[] }>('/nodes');
+    return data.nodes;
   },
 
   getNode: async (id: string): Promise<NodeDetails> => {

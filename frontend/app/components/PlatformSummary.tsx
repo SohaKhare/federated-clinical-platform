@@ -50,7 +50,7 @@ export default function PlatformSummary() {
     <div className={styles.summaryContainer}>
       <div className={styles.titleSection}>
         <h1 className={styles.title}>
-          {isGlobal ? 'Global Node Federation' : 'Platform Summary'}
+          {isGlobal ? 'Global Node Federation' : 'clinical Summary'}
         </h1>
       </div>
 

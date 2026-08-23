@@ -42,12 +42,14 @@ export default function Sidebar() {
             <Server size={20} />
           </Link>
         ) : (
-          <Link href="/patients" className={`${styles.iconWrapper} ${pathname.startsWith('/patients') ? styles.active : ''}`} title="Patients Catalogue">
-            <User size={20} />
-          </Link>
-        {user?.role === 'local' && <Link href="/doctor" className={`${styles.iconWrapper} ${pathname.startsWith('/doctor') ? styles.active : ''}`} title="Doctor workspace">
-          <Stethoscope size={20} />
-        </Link>}
+          <>
+            <Link href="/patients" className={`${styles.iconWrapper} ${pathname.startsWith('/patients') ? styles.active : ''}`} title="Patients Catalogue">
+              <User size={20} />
+            </Link>
+            <Link href="/doctor" className={`${styles.iconWrapper} ${pathname.startsWith('/doctor') ? styles.active : ''}`} title="Doctor workspace">
+              <Stethoscope size={20} />
+            </Link>
+          </>
         )}
       </nav>
 

@@ -13,19 +13,21 @@ export default function PatientsPage() {
   const [search, setSearch] = useState('');
   const [sexFilter, setSexFilter] = useState('All');
 
-  useEffect(() => {
-    async function load() {
-      try {
-        setPatients(await api.getPatients());
-      } catch (e) {
-        console.error('Failed to load patients', e);
-        setError(e instanceof Error ? e.message : 'Failed to load patients');
-      } finally {
-        setLoading(false);
-      }
+  const loadPatients = useCallback(async () => {
+    try {
+      setLoading(true);
+      setPatients(await api.getPatients());
+    } catch (e) {
+      console.error('Failed to load patients', e);
+      setError(e instanceof Error ? e.message : 'Failed to load patients');
+    } finally {
+      setLoading(false);
     }
-    load();
   }, []);
+
+  useEffect(() => {
+    loadPatients();
+  }, [loadPatients]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
