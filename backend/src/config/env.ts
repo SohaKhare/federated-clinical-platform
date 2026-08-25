@@ -40,7 +40,10 @@ export const env = {
   federationSharedSecret:
     process.env.FEDERATION_SHARED_SECRET ?? "development-federation-key",
 
-  databaseUrl: requiredEnv("DATABASE_URL"),
+  supabase: {
+    url: requiredEnv("SUPABASE_URL"),
+    serviceRoleKey: requiredEnv("SUPABASE_SERVICE_ROLE_KEY"),
+  },
 
   google: {
     clientId: requiredEnv("LOCAL_GOOGLE_CLIENT_ID"),

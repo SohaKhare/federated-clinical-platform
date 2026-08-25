@@ -1,6 +1,4 @@
-import type { InputJsonValue, JsonValue } from "@prisma/client/runtime/library";
-import type { Prisma } from "@prisma/client";
-import { prisma } from "../../config/prisma.js";
+import { supabase } from "../../config/supabase.js";
 import type {
   ClinicalSnapshot,
   CreatePatientInput,
@@ -11,6 +9,10 @@ import type {
   CreatePatientEventInput,
   PatientEvent,
 } from "../../interfaces/model/patient-event.interface.js";
+import type { Database } from "../../types/supabase.js";
+
+type PatientRow = Database["public"]["Tables"]["patients"]["Row"];
+type PatientEventRow = Database["public"]["Tables"]["patient_events"]["Row"];
 
 const EMPTY_SNAPSHOT: ClinicalSnapshot = {
   symptoms: [],
@@ -22,77 +24,100 @@ export async function createPatient(
   patient: CreatePatientInput,
   hospitalId: string,
 ): Promise<Patient> {
-  return prisma.$transaction(async (transaction) => {
-    const createdPatient = await transaction.patient.create({
-      data: {
-        hospitalId,
-        name: patient.name,
-        age: patient.age,
-        sex: patient.sex,
-      },
-    });
+  const snapshot: ClinicalSnapshot = {
+    symptoms: patient.symptoms,
+    diagnosed_diseases: patient.diagnosed_diseases,
+    health_conditions: patient.health_conditions,
+  };
 
-    const snapshot: ClinicalSnapshot = {
-      symptoms: patient.symptoms,
-      diagnosed_diseases: patient.diagnosed_diseases,
-      health_conditions: patient.health_conditions,
-    };
+  const { data: createdPatient, error } = await supabase
+    .from("patients")
+    .insert({
+      hospital_id: hospitalId,
+      name: patient.name,
+      age: patient.age,
+      sex: patient.sex,
+    })
+    .select()
+    .single();
 
-    await transaction.patientEvent.create({
-      data: {
-        patientId: createdPatient.patientId,
-        eventType: "patient_created",
-        eventData: snapshot as unknown as InputJsonValue,
-      },
-    });
+  if (error || !createdPatient) {
+    throw new Error(error?.message ?? "Failed to create patient.");
+  }
 
-    return toPatient(createdPatient, snapshot);
+  const { error: eventError } = await supabase.from("patient_events").insert({
+    patient_id: createdPatient.patient_id,
+    event_type: "patient_created",
+    event_data: snapshot,
   });
+
+  if (eventError) {
+    throw new Error(eventError.message);
+  }
+
+  return toPatient(createdPatient, snapshot);
 }
 
 export async function getPatients(hospitalId: string): Promise<Patient[]> {
-  const patients = await prisma.patient.findMany({
-    where: { hospitalId },
-    orderBy: { updatedAt: "desc" },
-  });
+  const { data: patients, error } = await supabase
+    .from("patients")
+    .select("*")
+    .eq("hospital_id", hospitalId)
+    .order("updated_at", { ascending: false });
 
-  if (patients.length === 0) {
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!patients || patients.length === 0) {
     return [];
   }
 
-  const latestSnapshotEvents = await prisma.patientEvent.findMany({
-    where: {
-      patientId: { in: patients.map((patient) => patient.patientId) },
-      eventType: { in: ["patient_created", "patient_updated"] },
-    },
-    orderBy: { occurredAt: "desc" },
-    distinct: ["patientId"],
-  });
+  const { data: events, error: eventsError } = await supabase
+    .from("patient_events")
+    .select("*")
+    .in(
+      "patient_id",
+      patients.map((patient) => patient.patient_id),
+    )
+    .in("event_type", ["patient_created", "patient_updated"])
+    .order("occurred_at", { ascending: false });
 
-  const snapshotByPatientId = new Map(
-    latestSnapshotEvents.map((event) => [
-      event.patientId,
-      toSnapshot(event.eventData),
-    ]),
-  );
+  if (eventsError) {
+    throw new Error(eventsError.message);
+  }
+
+  const snapshotByPatientId = new Map<string, ClinicalSnapshot>();
+
+  for (const event of events ?? []) {
+    if (!snapshotByPatientId.has(event.patient_id)) {
+      snapshotByPatientId.set(event.patient_id, toSnapshot(event.event_data));
+    }
+  }
 
   return patients.map((patient) =>
-    toPatient(patient, snapshotByPatientId.get(patient.patientId) ?? EMPTY_SNAPSHOT),
+    toPatient(patient, snapshotByPatientId.get(patient.patient_id) ?? EMPTY_SNAPSHOT),
   );
 }
 
 export async function getPatientById(
   patientId: string,
 ): Promise<Patient | null> {
-  const patient = await prisma.patient.findUnique({
-    where: { patientId },
-  });
+  const { data: patient, error } = await supabase
+    .from("patients")
+    .select("*")
+    .eq("patient_id", patientId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
 
   if (!patient) {
     return null;
   }
 
-  const snapshot = await getLatestSnapshot(patientId, prisma);
+  const snapshot = await getLatestSnapshot(patientId);
 
   return toPatient(patient, snapshot);
 }
@@ -101,101 +126,127 @@ export async function updatePatient(
   patientId: string,
   input: UpdatePatientInput,
 ): Promise<Patient | null> {
-  const updated = await prisma.$transaction(async (transaction) => {
-    const existingPatient = await transaction.patient.findUnique({
-      where: { patientId },
+  const { data: existingPatient, error: existingError } = await supabase
+    .from("patients")
+    .select("patient_id")
+    .eq("patient_id", patientId)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+
+  if (!existingPatient) {
+    return null;
+  }
+
+  const clinicalFieldsChanged =
+    input.symptoms !== undefined ||
+    input.diagnosed_diseases !== undefined ||
+    input.health_conditions !== undefined;
+
+  let snapshot = await getLatestSnapshot(patientId);
+
+  if (clinicalFieldsChanged) {
+    snapshot = {
+      symptoms: input.symptoms ?? snapshot.symptoms,
+      diagnosed_diseases: input.diagnosed_diseases ?? snapshot.diagnosed_diseases,
+      health_conditions: input.health_conditions ?? snapshot.health_conditions,
+    };
+
+    const { error: eventError } = await supabase.from("patient_events").insert({
+      patient_id: patientId,
+      event_type: "patient_updated",
+      event_data: snapshot,
     });
 
-    if (!existingPatient) {
-      return null;
+    if (eventError) {
+      throw new Error(eventError.message);
     }
+  }
 
-    const clinicalFieldsChanged =
-      input.symptoms !== undefined ||
-      input.diagnosed_diseases !== undefined ||
-      input.health_conditions !== undefined;
+  const { data: patient, error } = await supabase
+    .from("patients")
+    .update({
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.age !== undefined ? { age: input.age } : {}),
+      ...(input.sex !== undefined ? { sex: input.sex } : {}),
+      // Always touch updated_at, even for a clinical-only change, since it
+      // drives which patients are picked up for the next training round.
+      updated_at: new Date().toISOString(),
+    })
+    .eq("patient_id", patientId)
+    .select()
+    .single();
 
-    let snapshot = await getLatestSnapshot(patientId, transaction);
+  if (error || !patient) {
+    throw new Error(error?.message ?? "Failed to update patient.");
+  }
 
-    if (clinicalFieldsChanged) {
-      snapshot = {
-        symptoms: input.symptoms ?? snapshot.symptoms,
-        diagnosed_diseases: input.diagnosed_diseases ?? snapshot.diagnosed_diseases,
-        health_conditions: input.health_conditions ?? snapshot.health_conditions,
-      };
-
-      await transaction.patientEvent.create({
-        data: {
-          patientId,
-          eventType: "patient_updated",
-          eventData: snapshot as unknown as InputJsonValue,
-        },
-      });
-    }
-
-    const patient = await transaction.patient.update({
-      where: { patientId },
-      data: {
-        ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(input.age !== undefined ? { age: input.age } : {}),
-        ...(input.sex !== undefined ? { sex: input.sex } : {}),
-        // Always touch updatedAt, even for a clinical-only change, since it
-        // drives which patients are picked up for the next training round.
-        updatedAt: new Date(),
-      },
-    });
-
-    return { patient, snapshot };
-  });
-
-  return updated ? toPatient(updated.patient, updated.snapshot) : null;
+  return toPatient(patient, snapshot);
 }
 
 export async function getPatientEvents(
   patientId: string,
 ): Promise<PatientEvent[]> {
-  const events = await prisma.patientEvent.findMany({
-    where: { patientId },
-    orderBy: { occurredAt: "asc" },
-  });
+  const { data: events, error } = await supabase
+    .from("patient_events")
+    .select("*")
+    .eq("patient_id", patientId)
+    .order("occurred_at", { ascending: true });
 
-  return events.map(toPatientEvent);
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (events ?? []).map(toPatientEvent);
 }
 
 export async function addPatientEvent(
   patientId: string,
   event: CreatePatientEventInput,
 ): Promise<PatientEvent> {
-  const createdEvent = await prisma.patientEvent.create({
-    data: {
-      patientId,
-      eventType: event.eventType,
-      eventData: event.eventData as InputJsonValue,
-      ...(event.occurredAt ? { occurredAt: new Date(event.occurredAt) } : {}),
-    },
-  });
+  const { data, error } = await supabase
+    .from("patient_events")
+    .insert({
+      patient_id: patientId,
+      event_type: event.eventType,
+      event_data: event.eventData,
+      ...(event.occurredAt ? { occurred_at: event.occurredAt } : {}),
+    })
+    .select()
+    .single();
 
-  return toPatientEvent(createdEvent);
+  if (error || !data) {
+    throw new Error(error?.message ?? "Failed to create patient event.");
+  }
+
+  return toPatientEvent(data);
 }
 
 /**
- * Every patient gets a `patient_created` event in the same transaction it's
- * created in, so this should always find one. Falls back to an empty
- * snapshot only if that invariant is ever somehow violated.
+ * Every patient gets a `patient_created` event at creation time, so this
+ * should always find one. Falls back to an empty snapshot only if that
+ * invariant is ever somehow violated.
  */
-async function getLatestSnapshot(
-  patientId: string,
-  client: Pick<Prisma.TransactionClient, "patientEvent">,
-): Promise<ClinicalSnapshot> {
-  const event = await client.patientEvent.findFirst({
-    where: { patientId, eventType: { in: ["patient_created", "patient_updated"] } },
-    orderBy: { occurredAt: "desc" },
-  });
+async function getLatestSnapshot(patientId: string): Promise<ClinicalSnapshot> {
+  const { data: event, error } = await supabase
+    .from("patient_events")
+    .select("*")
+    .eq("patient_id", patientId)
+    .in("event_type", ["patient_created", "patient_updated"])
+    .order("occurred_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  return event ? toSnapshot(event.eventData) : EMPTY_SNAPSHOT;
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return event ? toSnapshot(event.event_data) : EMPTY_SNAPSHOT;
 }
 
-function toSnapshot(eventData: JsonValue): ClinicalSnapshot {
+function toSnapshot(eventData: unknown): ClinicalSnapshot {
   if (!eventData || typeof eventData !== "object" || Array.isArray(eventData)) {
     return EMPTY_SNAPSHOT;
   }
@@ -216,48 +267,29 @@ function toSnapshot(eventData: JsonValue): ClinicalSnapshot {
   };
 }
 
-function toPatient(
-  patient: {
-    patientId: string;
-    hospitalId: string;
-    name: string;
-    age: number;
-    sex: string;
-    contributedToRound: number | null;
-    updatedAt: Date;
-    createdAt: Date;
-  },
-  snapshot: ClinicalSnapshot,
-): Patient {
+function toPatient(patient: PatientRow, snapshot: ClinicalSnapshot): Patient {
   return {
-    patient_id: patient.patientId,
-    hospital_id: patient.hospitalId,
+    patient_id: patient.patient_id,
+    hospital_id: patient.hospital_id,
     name: patient.name,
     age: patient.age,
     sex: patient.sex,
     symptoms: snapshot.symptoms,
     diagnosed_diseases: snapshot.diagnosed_diseases,
     health_conditions: snapshot.health_conditions,
-    contributed_to_round: patient.contributedToRound,
-    updated_at: patient.updatedAt.toISOString(),
-    created_at: patient.createdAt.toISOString(),
+    contributed_to_round: patient.contributed_to_round,
+    updated_at: patient.updated_at,
+    created_at: patient.created_at,
   };
 }
 
-function toPatientEvent(event: {
-  eventId: string;
-  patientId: string;
-  eventType: string;
-  eventData: JsonValue;
-  occurredAt: Date;
-  createdAt: Date;
-}): PatientEvent {
+function toPatientEvent(event: PatientEventRow): PatientEvent {
   return {
-    event_id: event.eventId,
-    patient_id: event.patientId,
-    event_type: event.eventType,
-    event_data: event.eventData as PatientEvent["event_data"],
-    occurred_at: event.occurredAt.toISOString(),
-    created_at: event.createdAt.toISOString(),
+    event_id: event.event_id,
+    patient_id: event.patient_id,
+    event_type: event.event_type,
+    event_data: event.event_data as PatientEvent["event_data"],
+    occurred_at: event.occurred_at,
+    created_at: event.created_at,
   };
 }

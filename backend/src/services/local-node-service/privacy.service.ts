@@ -1,4 +1,4 @@
-import { prisma } from "../../config/prisma.js";
+import { supabase } from "../../config/supabase.js";
 import type { PrivacyParameters } from "../../interfaces/model/privacy.interface.js";
 
 const EMPTY_PARAMETERS: PrivacyParameters = {
@@ -23,13 +23,31 @@ const DEMO_FALLBACK_NODE_ID = "1bb53b66-de9d-432b-8851-9cedd26f1ea9";
  * measured" — so this stays honestly empty until a real round reports it.
  */
 export async function getPrivacyParameters(nodeId: string): Promise<PrivacyParameters> {
-  const directCount = await prisma.log.count({ where: { nodeId } });
-  const targetNodeId = directCount > 0 ? nodeId : { in: [nodeId, DEMO_FALLBACK_NODE_ID] };
+  const { count: directCount, error: countError } = await supabase
+    .from("logs")
+    .select("*", { count: "exact", head: true })
+    .eq("node_id", nodeId);
 
-  const latestLog = await prisma.log.findFirst({
-    where: { nodeId: targetNodeId, direction: "outgoing", status: "confirmed" },
-    orderBy: { round: "desc" },
-  });
+  if (countError) {
+    throw new Error(countError.message);
+  }
+
+  const targetNodeIds =
+    directCount && directCount > 0 ? [nodeId] : [nodeId, DEMO_FALLBACK_NODE_ID];
+
+  const { data: latestLog, error } = await supabase
+    .from("logs")
+    .select("*")
+    .in("node_id", targetNodeIds)
+    .eq("direction", "outgoing")
+    .eq("status", "confirmed")
+    .order("round", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
 
   if (!latestLog) {
     return EMPTY_PARAMETERS;

@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
-import type { Prisma } from "@prisma/client";
 
-import { prisma } from "../../config/prisma.js";
+import { supabase } from "../../config/supabase.js";
 import type {
   FederatedNodePhase,
   FederatedRoundBroadcastInput,
@@ -10,12 +9,13 @@ import type {
   FederatedRoundSnapshot,
   FederatedRoundStartInput,
 } from "../../interfaces/model/federation-round.interface.js";
+import type { Database } from "../../types/supabase.js";
 
 interface LocalHospitalRecord {
   userId: string;
   hospitalName: string | null;
   email: string;
-  createdAt: Date;
+  createdAt: string;
 }
 
 interface RoundEvent {
@@ -61,9 +61,11 @@ interface RoundBroadcastResult {
   skipped_nodes: string[];
 }
 
+type FederatedRoundRow = Database["public"]["Tables"]["federated_rounds"]["Row"];
+
 const roundStore = new Map<string, RoundRecord>();
 let nextRoundNumber: number | null = null;
-let roundNumberInit: Promise<void> | null = null;
+let roundNumberInit: PromiseLike<void> | null = null;
 
 export async function startFederatedRound(
   input: FederatedRoundStartInput = {},
@@ -100,42 +102,30 @@ export async function startFederatedRound(
     });
   }
 
-  await prisma.$transaction(
-    selectedHospitals.map((hospital) =>
-      prisma.log.upsert({
-        where: {
-          nodeId_round_direction: {
-            nodeId: hospital.userId,
-            round,
-            direction: "outgoing",
-          },
-        },
-        create: {
-          nodeId: hospital.userId,
-          round,
-          direction: "outgoing",
-          status: "preparing",
-          timestamp: now,
-          metadata: roundMetadata(roundId, "starting", {
-            hospitalName: hospital.hospitalName ?? "",
-            targetCount: selectedHospitals.length,
-          }),
-        },
-        update: {
-          status: "preparing",
-          timestamp: now,
-          metadata: roundMetadata(roundId, "starting", {
-            hospitalName: hospital.hospitalName ?? "",
-            targetCount: selectedHospitals.length,
-          }),
-        },
-      }),
-    ),
-  );
+  for (const hospital of selectedHospitals) {
+    const { error } = await supabase.from("logs").upsert(
+      {
+        node_id: hospital.userId,
+        round,
+        direction: "outgoing",
+        status: "preparing",
+        timestamp: now.toISOString(),
+        metadata: roundMetadata(roundId, "starting", {
+          hospitalName: hospital.hospitalName ?? "",
+          targetCount: selectedHospitals.length,
+        }),
+      },
+      { onConflict: "node_id,round,direction" },
+    );
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
 
   // Only make the round visible/persisted once the per-hospital logs have
-  // actually been written, so a failed transaction can't leave an orphaned
-  // round record with no matching logs.
+  // actually been written, so a failed write can't leave an orphaned round
+  // record with no matching logs.
   roundStore.set(roundId, record);
   await persistRound(record);
 
@@ -178,33 +168,27 @@ export async function recordFederatedCallback(
   record.status = record.status === "starting" ? "collecting" : record.status;
   record.updatedAt = now;
 
-  await prisma.patient.updateMany({
-    where: { hospitalId: input.nodeId, contributedToRound: null },
-    data: { contributedToRound: record.round },
-  });
+  await supabase
+    .from("patients")
+    .update({ contributed_to_round: record.round })
+    .eq("hospital_id", input.nodeId)
+    .is("contributed_to_round", null);
 
-  await prisma.log.upsert({
-    where: {
-      nodeId_round_direction: {
-        nodeId: input.nodeId,
-        round: record.round,
-        direction: "incoming",
-      },
-    },
-    create: {
-      nodeId: input.nodeId,
+  const { error } = await supabase.from("logs").upsert(
+    {
+      node_id: input.nodeId,
       round: record.round,
       direction: "incoming",
       status: "received",
-      timestamp: now,
-      metadata: roundMetadata(roundId, "received", payload as Prisma.InputJsonValue),
+      timestamp: now.toISOString(),
+      metadata: roundMetadata(roundId, "received", payload),
     },
-    update: {
-      status: "received",
-      timestamp: now,
-      metadata: roundMetadata(roundId, "received", payload as Prisma.InputJsonValue),
-    },
-  });
+    { onConflict: "node_id,round,direction" },
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
 
   await persistRound(record);
 
@@ -270,28 +254,21 @@ export async function broadcastFederatedWeights(
     record.nodes.set(nodeId, node);
     broadcastedNodes.push(nodeId);
 
-    await prisma.log.upsert({
-      where: {
-        nodeId_round_direction: {
-          nodeId,
-          round: record.round,
-          direction: "outgoing",
-        },
-      },
-      create: {
-        nodeId,
+    const { error } = await supabase.from("logs").upsert(
+      {
+        node_id: nodeId,
         round: record.round,
         direction: "outgoing",
         status: "synced",
-        timestamp: now,
-        metadata: roundMetadata(roundId, "broadcasted", payload as Prisma.InputJsonValue),
+        timestamp: now.toISOString(),
+        metadata: roundMetadata(roundId, "broadcasted", payload),
       },
-      update: {
-        status: "synced",
-        timestamp: now,
-        metadata: roundMetadata(roundId, "broadcasted", payload as Prisma.InputJsonValue),
-      },
-    });
+      { onConflict: "node_id,round,direction" },
+    );
+
+    if (error) {
+      throw new Error(error.message);
+    }
   }
 
   record.status = broadcastedNodes.length === targetNodeIds.length ? "completed" : "partial";
@@ -315,25 +292,34 @@ export async function getFederatedRoundSnapshot(
     return toSnapshot(record);
   }
 
-  const persisted = await prisma.federatedRound.findUnique({
-    where: { roundId },
-  });
+  const { data: persisted, error } = await supabase
+    .from("federated_rounds")
+    .select("*")
+    .eq("round_id", roundId)
+    .maybeSingle();
 
-  return persisted
-    ? (persisted.snapshot as unknown as FederatedRoundSnapshot)
-    : null;
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return persisted ? (persisted.snapshot as unknown as FederatedRoundSnapshot) : null;
 }
 
 export async function getFederatedRoundSnapshots(): Promise<
   FederatedRoundSnapshot[]
 > {
-  const persistedRounds = await prisma.federatedRound.findMany({
-    orderBy: { round: "desc" },
-  });
+  const { data: persistedRounds, error } = await supabase
+    .from("federated_rounds")
+    .select("*")
+    .order("round", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
 
   const snapshots = new Map(
-    persistedRounds.map((round) => [
-      round.roundId,
+    (persistedRounds ?? []).map((round: FederatedRoundRow) => [
+      round.round_id,
       round.snapshot as unknown as FederatedRoundSnapshot,
     ]),
   );
@@ -352,9 +338,15 @@ async function getRoundRecord(roundId: string): Promise<RoundRecord | null> {
     return inMemory;
   }
 
-  const persisted = await prisma.federatedRound.findUnique({
-    where: { roundId },
-  });
+  const { data: persisted, error } = await supabase
+    .from("federated_rounds")
+    .select("*")
+    .eq("round_id", roundId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
 
   if (!persisted) {
     return null;
@@ -394,37 +386,42 @@ async function getRoundRecord(roundId: string): Promise<RoundRecord | null> {
 async function persistRound(record: RoundRecord): Promise<void> {
   const snapshot = toSnapshot(record);
 
-  await prisma.federatedRound.upsert({
-    where: { roundId: record.roundId },
-    create: {
-      roundId: record.roundId,
+  const { error } = await supabase.from("federated_rounds").upsert(
+    {
+      round_id: record.roundId,
       round: record.round,
       status: record.status,
-      targetNodeIds: snapshot.target_node_ids as Prisma.InputJsonValue,
-      snapshot: snapshot as unknown as Prisma.InputJsonValue,
-      createdAt: record.createdAt,
-      updatedAt: record.updatedAt,
+      target_node_ids: snapshot.target_node_ids,
+      snapshot,
+      created_at: record.createdAt.toISOString(),
+      updated_at: record.updatedAt.toISOString(),
     },
-    update: {
-      status: record.status,
-      targetNodeIds: snapshot.target_node_ids as Prisma.InputJsonValue,
-      snapshot: snapshot as unknown as Prisma.InputJsonValue,
-      updatedAt: record.updatedAt,
-    },
-  });
+    { onConflict: "round_id" },
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 async function getEligibleLocalHospitals(): Promise<LocalHospitalRecord[]> {
-  return prisma.user.findMany({
-    where: { role: "local", hospitalName: { not: null } },
-    select: {
-      userId: true,
-      hospitalName: true,
-      email: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: "asc" },
-  });
+  const { data, error } = await supabase
+    .from("users")
+    .select("user_id, hospital_name, email, created_at")
+    .eq("role", "local")
+    .not("hospital_name", "is", null)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((user) => ({
+    userId: user.user_id,
+    hospitalName: user.hospital_name,
+    email: user.email,
+    createdAt: user.created_at,
+  }));
 }
 
 function selectHospitals(
@@ -474,9 +471,19 @@ async function ensureRoundNumberInitialized(): Promise<void> {
   }
 
   if (!roundNumberInit) {
-    roundNumberInit = prisma.log.aggregate({ _max: { round: true } }).then((result) => {
-      nextRoundNumber = (result._max.round ?? 0) + 1;
-    });
+    roundNumberInit = supabase
+      .from("logs")
+      .select("round")
+      .order("round", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        nextRoundNumber = (data?.round ?? 0) + 1;
+      });
   }
 
   await roundNumberInit;
@@ -486,8 +493,8 @@ async function ensureRoundNumberInitialized(): Promise<void> {
 function roundMetadata(
   roundId: string,
   phase: string,
-  payload: Prisma.InputJsonValue,
-): Prisma.InputJsonValue {
+  payload: unknown,
+): Record<string, unknown> {
   return {
     round_id: roundId,
     phase,

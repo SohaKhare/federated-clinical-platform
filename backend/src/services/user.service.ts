@@ -1,7 +1,9 @@
-import { prisma } from "../config/prisma.js";
-import type { Prisma } from "@prisma/client";
+import { supabase } from "../config/supabase.js";
 import { isValidRole } from "../auth/roles.js";
 import type { OnboardingInput, UserSession } from "../interfaces/model/user.interface.js";
+import type { Database } from "../types/supabase.js";
+
+type UserRow = Database["public"]["Tables"]["users"]["Row"];
 
 /**
  * All Google logins create a "local" user by default. A user is promoted to
@@ -12,61 +14,62 @@ export async function upsertLocalUser(input: {
   email: string;
   picture?: string;
 }): Promise<UserSession> {
-  const user = await prisma.user.upsert({
-    where: { googleId: input.googleId },
-    update: {
-      email: input.email,
-      ...(input.picture !== undefined ? { picture: input.picture } : {}),
-    },
-    create: {
-      googleId: input.googleId,
-      email: input.email,
-      role: "local",
-      ...(input.picture !== undefined ? { picture: input.picture } : {}),
-    },
-  });
+  const { data, error } = await supabase
+    .from("users")
+    .upsert(
+      {
+        google_id: input.googleId,
+        email: input.email,
+        role: "local",
+        ...(input.picture !== undefined ? { picture: input.picture } : {}),
+      },
+      { onConflict: "google_id" },
+    )
+    .select()
+    .single();
 
-  return toUserSession(user);
+  if (error || !data) {
+    throw new Error(error?.message ?? "Failed to upsert user.");
+  }
+
+  return toUserSession(data);
 }
 
 export async function completeOnboarding(
   userId: string,
   input: OnboardingInput,
 ): Promise<UserSession> {
-  const user = await prisma.user.update({
-    where: { userId },
-    data: {
-      hospitalName: input.hospitalName,
+  const { data, error } = await supabase
+    .from("users")
+    .update({
+      hospital_name: input.hospitalName,
       pincode: input.pincode,
-      geolocation: input.geolocation as Prisma.InputJsonValue,
-    },
-  });
+      geolocation: input.geolocation,
+    })
+    .eq("user_id", userId)
+    .select()
+    .single();
 
-  return toUserSession(user);
+  if (error || !data) {
+    throw new Error(error?.message ?? "Failed to update user.");
+  }
+
+  return toUserSession(data);
 }
 
-function toUserSession(user: {
-  userId: string;
-  googleId: string;
-  email: string;
-  picture: string | null;
-  role: string;
-  hospitalName: string | null;
-  pincode: string | null;
-  geolocation: unknown;
-}): UserSession {
+function toUserSession(user: UserRow): UserSession {
   if (!isValidRole(user.role)) {
-    throw new Error(`User ${user.userId} has an invalid role: ${user.role}`);
+    throw new Error(`User ${user.user_id} has an invalid role: ${user.role}`);
   }
 
   return {
-    userId: user.userId,
-    googleId: user.googleId,
+    userId: user.user_id,
+    googleId: user.google_id,
     email: user.email,
-    ...(user.hospitalName ? { hospitalName: user.hospitalName } : {}),
+    ...(user.hospital_name ? { hospitalName: user.hospital_name } : {}),
     ...(user.picture ? { picture: user.picture } : {}),
     node: user.role,
     role: user.role,
-    onboarded: Boolean(user.hospitalName && user.pincode),
+    onboarded: Boolean(user.hospital_name && user.pincode),
   };
 }

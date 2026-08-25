@@ -1,6 +1,4 @@
-import type { JsonValue } from "@prisma/client/runtime/library";
-
-import { prisma } from "../../config/prisma.js";
+import { supabase } from "../../config/supabase.js";
 import { env } from "../../config/env.js";
 import type { LocalTrainingStartInput } from "../../interfaces/model/federation-round.interface.js";
 import type {
@@ -10,6 +8,9 @@ import type {
   LocalModelStatus,
 } from "../../interfaces/model/local-model.interface.js";
 import type { LogDirection, LogStatus } from "../../interfaces/model/log.interface.js";
+import type { Database } from "../../types/supabase.js";
+
+type LogRow = Database["public"]["Tables"]["logs"]["Row"];
 
 export async function startLocalTraining(
   nodeId: string,
@@ -96,30 +97,24 @@ const COMPLETED_STATUSES = new Set<string>(["confirmed", "received", "applied", 
  * into `logs`. Fields stay honestly null until real rounds report data.
  */
 export async function getLocalModelInfo(nodeId: string): Promise<LocalModelInfo> {
-  const [latestLog, latestTrainedLog, roundAggregate] = await Promise.all([
-    prisma.log.findFirst({
-      where: { nodeId },
-      orderBy: [{ round: "desc" }, { timestamp: "desc" }],
-    }),
+  const [latestLog, latestTrainedLog, latestRoundRow] = await Promise.all([
+    fetchLatestLog(nodeId),
     findLatestTrainedLog(nodeId),
-    prisma.log.aggregate({ where: { nodeId }, _max: { round: true } }),
+    fetchLatestRound(nodeId),
   ]);
 
   return {
     model_version: await deriveModelVersion(nodeId),
     status: deriveStatus(latestLog?.status ?? null),
-    last_trained_at: toIsoOrNull(latestTrainedLog?.timestamp ?? null),
+    last_trained_at: latestTrainedLog?.timestamp ?? null,
     sample_count: readNumber(latestTrainedLog?.metadata, "num_examples"),
-    latest_round: roundAggregate._max.round ?? null,
+    latest_round: latestRoundRow,
   };
 }
 
 export async function getLocalModelMetrics(nodeId: string): Promise<LocalModelMetrics> {
   const [logs, latestTrainedLog] = await Promise.all([
-    prisma.log.findMany({
-      where: { nodeId },
-      orderBy: [{ round: "asc" }, { timestamp: "asc" }],
-    }),
+    fetchAllLogs(nodeId),
     findLatestTrainedLog(nodeId),
   ]);
 
@@ -132,7 +127,7 @@ export async function getLocalModelMetrics(nodeId: string): Promise<LocalModelMe
     train_accuracy: readNumber(log.metadata, "train_accuracy"),
     eval_loss: readNumber(log.metadata, "eval_loss"),
     eval_accuracy: readNumber(log.metadata, "eval_accuracy"),
-    recorded_at: log.timestamp.toISOString(),
+    recorded_at: log.timestamp,
   }));
 
   // Latest evaluation wins; fall back to the newest trained log so a node
@@ -153,23 +148,85 @@ export async function getLocalModelMetrics(nodeId: string): Promise<LocalModelMe
   };
 }
 
-async function findLatestTrainedLog(nodeId: string) {
+async function fetchLatestLog(nodeId: string): Promise<LogRow | null> {
+  const { data, error } = await supabase
+    .from("logs")
+    .select("*")
+    .eq("node_id", nodeId)
+    .order("timestamp", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+}
+
+async function fetchLatestRound(nodeId: string): Promise<number | null> {
+  const { data, error } = await supabase
+    .from("logs")
+    .select("round")
+    .eq("node_id", nodeId)
+    .order("round", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data?.round ?? null;
+}
+
+async function fetchAllLogs(nodeId: string): Promise<LogRow[]> {
+  const { data, error } = await supabase
+    .from("logs")
+    .select("*")
+    .eq("node_id", nodeId)
+    .order("round", { ascending: true })
+    .order("timestamp", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data ?? [];
+}
+
+async function findLatestTrainedLog(nodeId: string): Promise<LogRow | null> {
   // A log only proves local training happened if its metadata carries
   // metrics — plain round bookkeeping entries carry none.
-  const candidates = await prisma.log.findMany({
-    where: { nodeId },
-    orderBy: [{ round: "desc" }, { timestamp: "desc" }],
-    take: 50,
-  });
+  const { data: candidates, error } = await supabase
+    .from("logs")
+    .select("*")
+    .eq("node_id", nodeId)
+    .order("round", { ascending: false })
+    .order("timestamp", { ascending: false })
+    .limit(50);
 
-  return candidates.find((log) => hasTrainingMetrics(log.metadata)) ?? null;
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (candidates ?? []).find((log) => hasTrainingMetrics(log.metadata)) ?? null;
 }
 
 async function deriveModelVersion(nodeId: string): Promise<string | null> {
-  const completed = await prisma.log.findFirst({
-    where: { nodeId, status: { in: [...COMPLETED_STATUSES] } },
-    orderBy: [{ round: "desc" }, { timestamp: "desc" }],
-  });
+  const { data: completed, error } = await supabase
+    .from("logs")
+    .select("*")
+    .eq("node_id", nodeId)
+    .in("status", [...COMPLETED_STATUSES])
+    .order("round", { ascending: false })
+    .order("timestamp", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
 
   return completed ? `v${completed.round}` : null;
 }
@@ -191,7 +248,7 @@ function deriveStatus(latestStatus: string | null): LocalModelStatus {
  * metadata (API.md bridge contract), nested under `metrics` (privacy
  * service), or under `payload.metrics` (round callbacks). Try each.
  */
-function readNumber(metadata: JsonValue | null | undefined, key: string): number | null {
+function readNumber(metadata: unknown, key: string): number | null {
   for (const source of metricSources(metadata)) {
     const value = source[key];
 
@@ -203,13 +260,13 @@ function readNumber(metadata: JsonValue | null | undefined, key: string): number
   return null;
 }
 
-function hasTrainingMetrics(metadata: JsonValue | null | undefined): boolean {
+function hasTrainingMetrics(metadata: unknown): boolean {
   return ["train_loss", "train_accuracy", "eval_loss", "eval_accuracy"].some(
     (key) => readNumber(metadata, key) !== null,
   );
 }
 
-function metricSources(metadata: JsonValue | null | undefined): Array<Record<string, unknown>> {
+function metricSources(metadata: unknown): Array<Record<string, unknown>> {
   const sources: Array<Record<string, unknown>> = [];
   const root = asRecord(metadata);
 
@@ -240,6 +297,3 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function toIsoOrNull(date: Date | null): string | null {
-  return date ? date.toISOString() : null;
-}
