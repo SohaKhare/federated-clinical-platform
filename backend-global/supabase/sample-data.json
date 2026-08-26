@@ -1,0 +1,175 @@
+{
+  "users": [
+    {
+      "user_id": "4f14e45f-ceea-4f3e-b6a1-0d2a3c4e5f6a",
+      "google_id": "108234567890123456789",
+      "email": "hospital@aiims.example",
+      "picture": "https://lh3.googleusercontent.com/a/default-user",
+      "role": "local",
+      "hospital_name": "AIIMS Delhi",
+      "pincode": "110029",
+      "geolocation": { "latitude": 28.5672, "longitude": 77.21 },
+      "created_at": "2026-08-20T09:00:00Z",
+      "updated_at": "2026-08-20T09:05:00Z"
+    },
+    {
+      "user_id": "7b2c9e10-3f4a-4b5c-9d6e-1a2b3c4d5e6f",
+      "google_id": "109876543210987654321",
+      "email": "researcher@federated.example",
+      "picture": null,
+      "role": "global",
+      "hospital_name": null,
+      "pincode": null,
+      "geolocation": {},
+      "created_at": "2026-08-20T09:10:00Z",
+      "updated_at": "2026-08-20T09:10:00Z"
+    }
+  ],
+
+  "patients": [
+    {
+      "patient_id": "8f14e45f-ceea-4f3e-b6a1-0d2a3c4e5f6a",
+      "hospital_id": "4f14e45f-ceea-4f3e-b6a1-0d2a3c4e5f6a",
+      "name": "Rekha Sharma",
+      "age": 34,
+      "sex": "F",
+      "contributed_to_round": 14,
+      "updated_at": "2026-08-22T10:40:00Z",
+      "created_at": "2026-08-22T10:00:00Z"
+    },
+    {
+      "patient_id": "0b35da3f-54b8-4212-b0ff-54564bf8ac87",
+      "hospital_id": "4f14e45f-ceea-4f3e-b6a1-0d2a3c4e5f6a",
+      "name": "Amit Verma",
+      "age": 52,
+      "sex": "M",
+      "contributed_to_round": 14,
+      "updated_at": "2026-08-21T14:20:00Z",
+      "created_at": "2026-08-21T14:20:00Z"
+    },
+    {
+      "patient_id": "172b2d43-f0f0-4f1d-879d-63c9efd27ed9",
+      "hospital_id": "4f14e45f-ceea-4f3e-b6a1-0d2a3c4e5f6a",
+      "name": "Sita Devi",
+      "age": 8,
+      "sex": "F",
+      "contributed_to_round": null,
+      "updated_at": "2026-08-22T08:15:00Z",
+      "created_at": "2026-08-22T08:15:00Z"
+    }
+  ],
+
+  "patient_events": [
+    {
+      "event_id": "64bc0a6d-f74e-4902-b0e9-84dd14bb9a54",
+      "patient_id": "8f14e45f-ceea-4f3e-b6a1-0d2a3c4e5f6a",
+      "event_type": "patient_created",
+      "event_data": {
+        "symptoms": ["fever"],
+        "diagnosed_diseases": ["ICD10_J45"],
+        "health_conditions": {
+          "bp": "130/85",
+          "sugar": "110mg/dL",
+          "allergies": ["penicillin"]
+        }
+      },
+      "occurred_at": "2026-08-22T10:00:00Z",
+      "created_at": "2026-08-22T10:00:00Z"
+    },
+    {
+      "event_id": "b2f5c6d7-1a2b-4c3d-8e9f-0a1b2c3d4e5f",
+      "patient_id": "8f14e45f-ceea-4f3e-b6a1-0d2a3c4e5f6a",
+      "event_type": "treatment",
+      "event_data": {
+        "treatment": "Antibiotic course",
+        "outcome": "improving"
+      },
+      "occurred_at": "2026-08-22T10:30:00Z",
+      "created_at": "2026-08-22T10:30:00Z"
+    },
+    {
+      "event_id": "c3a6d7e8-2b3c-5d4e-9f0a-1b2c3d4e5f6a",
+      "patient_id": "8f14e45f-ceea-4f3e-b6a1-0d2a3c4e5f6a",
+      "event_type": "patient_updated",
+      "event_data": {
+        "symptoms": ["fever", "cough"],
+        "diagnosed_diseases": ["ICD10_J45"],
+        "health_conditions": {
+          "bp": "128/82",
+          "sugar": "108mg/dL",
+          "allergies": ["penicillin"]
+        }
+      },
+      "occurred_at": "2026-08-22T10:40:00Z",
+      "created_at": "2026-08-22T10:40:00Z"
+    },
+    {
+      "event_id": "04814228-e9b9-4ba6-8757-c9f8e4086f72",
+      "patient_id": "0b35da3f-54b8-4212-b0ff-54564bf8ac87",
+      "event_type": "patient_created",
+      "event_data": {
+        "symptoms": ["chest pain", "shortness of breath"],
+        "diagnosed_diseases": ["ICD10_I25"],
+        "health_conditions": {
+          "bp": "145/95",
+          "cholesterol": "220mg/dL"
+        }
+      },
+      "occurred_at": "2026-08-21T14:20:00Z",
+      "created_at": "2026-08-21T14:20:00Z"
+    },
+    {
+      "event_id": "53cb2d57-62dc-4d46-8275-4dde25159d3d",
+      "patient_id": "172b2d43-f0f0-4f1d-879d-63c9efd27ed9",
+      "event_type": "patient_created",
+      "event_data": {
+        "symptoms": ["rash", "mild fever"],
+        "diagnosed_diseases": [],
+        "health_conditions": {
+          "allergies": ["dust"]
+        }
+      },
+      "occurred_at": "2026-08-22T08:15:00Z",
+      "created_at": "2026-08-22T08:15:00Z"
+    }
+  ],
+
+  "logs": [
+    {
+      "log_id": "d4b7e8f9-3c4d-6e5f-0a1b-2c3d4e5f6a7b",
+      "node_id": "HOSP_A",
+      "timestamp": "2026-08-22T10:20:00Z",
+      "direction": "outgoing",
+      "round": 14,
+      "metadata": {
+        "num_examples": 4213,
+        "parameters": {
+          "fc1.weight": [[0.0182, -0.0093], [0.0044, 0.0271]],
+          "fc1.bias": [0.0011, -0.0005, 0.0032],
+          "fc2.weight": [[0.0509, -0.0117]],
+          "fc2.bias": [-0.0021, 0.0084]
+        },
+        "metrics": { "loss": 0.31, "epsilon": 3.2, "delta": 1e-5 }
+      },
+      "status": "confirmed",
+      "created_at": "2026-08-22T10:20:00Z"
+    },
+    {
+      "log_id": "e5c8f9a0-4d5e-7f6a-1b2c-3d4e5f6a7b8c",
+      "node_id": "HOSP_A",
+      "timestamp": "2026-08-22T10:25:00Z",
+      "direction": "incoming",
+      "round": 15,
+      "metadata": {
+        "parameters": {
+          "fc1.weight": [[0.0179, -0.0091]],
+          "fc1.bias": [0.0012, -0.0004],
+          "fc2.weight": [[0.0498, -0.011]],
+          "fc2.bias": [-0.0019, 0.0081]
+        }
+      },
+      "status": "confirmed",
+      "created_at": "2026-08-22T10:25:00Z"
+    }
+  ]
+}

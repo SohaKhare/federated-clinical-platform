@@ -156,12 +156,11 @@ export async function recordFederatedCallback(
   }
 
   const now = new Date();
-  const storagePath = await storeModelIfPresent(roundId, input.nodeId, input.update);
   const payload = {
     update: input.update ?? null,
     metrics: input.metrics ?? null,
     notes: input.notes ?? null,
-    storage_path: storagePath,
+    storage_path: input.storage_path ?? null,
   };
 
   node.events.push(
@@ -215,41 +214,6 @@ export async function recordFederatedCallback(
     round: await getFederatedRoundSnapshot(roundId) ?? toSnapshot(record),
     node: toNodeSnapshot(node),
   };
-}
-
-/**
- * The ML service and this backend share a filesystem in this deployment, so
- * the callback just points at the .pt it already wrote to disk instead of
- * shipping the bytes over HTTP — read it straight off disk and hand it to
- * Supabase Storage.
- */
-async function storeModelIfPresent(
-  roundId: string,
-  nodeId: string,
-  update: unknown,
-): Promise<string | null> {
-  const modelFile =
-    update && typeof update === "object" && "model_file" in update
-      ? (update as Record<string, unknown>).model_file
-      : undefined;
-
-  if (typeof modelFile !== "string" || !modelFile) {
-    return null;
-  }
-
-  const buffer = await readFile(modelFile);
-  const storagePath = `${roundId}/${nodeId}.pt`;
-
-  const { data, error } = await supabase.storage.from("models").upload(storagePath, buffer, {
-    contentType: "application/octet-stream",
-    upsert: true,
-  });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return data.path;
 }
 
 /**

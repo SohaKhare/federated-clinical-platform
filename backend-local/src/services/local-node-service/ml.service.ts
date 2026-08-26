@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { supabase } from "../../config/supabase.js";
 import { env } from "../../config/env.js";
 import type { LocalTrainingStartInput } from "../../interfaces/model/federation-round.interface.js";
@@ -28,7 +30,10 @@ export async function startLocalTraining(
       node_id: nodeId,
       round_id: roundId,
       round,
-      callback_url: `${env.backendUrl}/api/federated/rounds/${roundId}/callback`,
+      // Points at this node's own backend (co-located with this ML
+      // service) — global can't read a file path off this machine's disk,
+      // so results get relayed through here first. See reportTrainingResult.
+      callback_url: `${env.backendUrl}/federated/rounds/${roundId}/local-callback`,
       config: input.config ?? {},
     }),
   });
@@ -40,31 +45,55 @@ export async function startLocalTraining(
   return response.json();
 }
 
-export async function startFederatedTraining(input: {
-  roundId: string;
-  round: number;
-  nodeIds: string[];
-}) {
-  const response = await fetch(`${env.federatedUrl}/federation/runs`, {
+/**
+ * The ML service's own callback lands here first (co-located, same
+ * filesystem) — read the .pt it wrote off disk, upload it to Supabase
+ * ourselves, then forward only the small resulting storage_path to global.
+ * Global never needs to touch this machine's filesystem.
+ */
+export async function reportTrainingResult(
+  roundId: string,
+  body: { nodeId: string; update?: unknown; metrics?: Record<string, unknown> },
+): Promise<void> {
+  const modelFile =
+    body.update && typeof body.update === "object" && "model_file" in body.update
+      ? (body.update as Record<string, unknown>).model_file
+      : undefined;
+
+  let storagePath: string | null = null;
+
+  if (typeof modelFile === "string" && modelFile) {
+    const buffer = await readFile(modelFile);
+    const path = `${roundId}/${body.nodeId}.pt`;
+
+    const { data, error } = await supabase.storage.from("models").upload(path, buffer, {
+      contentType: "application/octet-stream",
+      upsert: true,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    storagePath = data.path;
+  }
+
+  const response = await fetch(`${env.globalNodeUrl}/api/federated/rounds/${roundId}/callback`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Federation-Key": env.federationSharedSecret,
     },
     body: JSON.stringify({
-      round_id: input.roundId,
-      round: input.round,
-      node_ids: input.nodeIds,
-      callback_url: `${env.backendUrl}/api/federated/rounds/${input.roundId}/callback`,
-      config: { "num-server-rounds": 3 },
+      nodeId: body.nodeId,
+      metrics: body.metrics ?? null,
+      ...(storagePath ? { storage_path: storagePath } : {}),
     }),
   });
 
   if (!response.ok) {
-    throw new Error(`ML service returned status ${response.status}.`);
+    throw new Error(`Global node returned status ${response.status} for training callback.`);
   }
-
-  return response.json();
 }
 
 /**

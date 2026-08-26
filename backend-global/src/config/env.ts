@@ -33,14 +33,16 @@ export const env = {
 
   corsOrigins,
 
-  federatedUrl: process.env.FEDERATED_URL ?? "http://localhost:8001",
-
-  // The global node's own backend defaults to talking to itself (same-server
-  // dev setup); set this to the hospital's real backend URL once local and
-  // global run as separate servers.
-  localNodeUrl: process.env.LOCAL_NODE_URL ?? backendUrl,
+  // This server's own ML aggregator instance (same machine/LAN) — handles
+  // /federation/aggregate for FedAvg once every node has checked in.
+  federatedUrl: process.env.FEDERATED_URL ?? "http://localhost:8002",
 
   backendUrl,
+
+  // The single local hospital node this global server talks to for now —
+  // one URL, since there's no per-hospital URL registry yet. Defaults to
+  // itself only for same-machine dev; set explicitly for a real split.
+  localNodeUrl: process.env.LOCAL_NODE_URL ?? backendUrl,
 
   federationSharedSecret:
     process.env.FEDERATION_SHARED_SECRET ?? "development-federation-key",

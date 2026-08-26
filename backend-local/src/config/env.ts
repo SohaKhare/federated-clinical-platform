@@ -33,14 +33,15 @@ export const env = {
 
   corsOrigins,
 
+  // This node's own ML service (same machine/LAN).
   federatedUrl: process.env.FEDERATED_URL ?? "http://localhost:8001",
 
-  // The global node's own backend defaults to talking to itself (same-server
-  // dev setup); set this to the hospital's real backend URL once local and
-  // global run as separate servers.
-  localNodeUrl: process.env.LOCAL_NODE_URL ?? backendUrl,
-
   backendUrl,
+
+  // The global server's URL — this node reports training results and
+  // reaches out for round bookkeeping there. Defaults to itself only for
+  // same-machine dev; set explicitly once global runs elsewhere.
+  globalNodeUrl: process.env.GLOBAL_NODE_URL ?? backendUrl,
 
   federationSharedSecret:
     process.env.FEDERATION_SHARED_SECRET ?? "development-federation-key",
