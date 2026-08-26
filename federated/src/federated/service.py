@@ -36,7 +36,7 @@ class Handler(BaseHTTPRequestHandler):
         raw_body = self.rfile.read(length)
 
         if self.path == "/federation/apply-model":
-            self._apply_model(raw_body)
+            self._apply_model(raw_body, self.headers.get("X-Node-Id"))
             return
 
         body = json.loads(raw_body or b"{}")
@@ -55,9 +55,28 @@ class Handler(BaseHTTPRequestHandler):
 
         os.environ["FEDERATION_ROUND_ID"] = str(body["round_id"])
         os.environ["FEDERATION_CALLBACK_URL"] = str(body["callback_url"])
-        os.environ["FEDERATION_NODE_IDS"] = ",".join(str(node) for node in body["node_ids"])
+        node_ids = [str(node) for node in body["node_ids"]]
+        os.environ["FEDERATION_NODE_IDS"] = ",".join(node_ids)
         config = body.get("config", {})
         os.environ["FEDERATION_ROUNDS"] = str(config.get("num-server-rounds", 3))
+
+        # Real hospital patients per node, reshaped onto Flower's
+        # partition-id (position in node_ids) and JSON-encoded — this has to
+        # be an env var, not a plain object, because assign_client/
+        # load_client_data in task.py run inside Ray's ClientAppActor, a
+        # separate OS process that only inherits the environment, not this
+        # process's Python state. See task.py's comment above
+        # participating_clients() for the full explanation.
+        patients_by_node = {
+            entry["node_id"]: entry.get("patients", [])
+            for entry in body.get("patients_by_node") or []
+            if isinstance(entry, dict) and entry.get("node_id")
+        }
+        os.environ["FEDERATION_PATIENTS_BY_PARTITION"] = json.dumps({
+            index: patients_by_node[node_id]
+            for index, node_id in enumerate(node_ids)
+            if patients_by_node.get(node_id)
+        })
 
         threading.Thread(target=run_federated, daemon=True).start()
         self.send_response(202)
@@ -87,17 +106,31 @@ class Handler(BaseHTTPRequestHandler):
         torch.save({"input_size": input_size, "state_dict": aggregated_state_dict}, output_path)
         self._json({"output_path": str(output_path.resolve())})
 
-    def _apply_model(self, raw_body: bytes) -> None:
+    def _apply_model(self, raw_body: bytes, node_id: str | None) -> None:
         if not raw_body:
             self.send_error(400, "Request body must contain the .pt bytes")
             return
 
-        model_path = Path.cwd() / "models" / "clinical_model.pt"
+        if not node_id:
+            self.send_error(400, "X-Node-Id header is required")
+            return
+
+        model_path = Path.cwd() / "models" / f"{node_id}.pt"
         model_path.parent.mkdir(exist_ok=True)
         model_path.write_bytes(raw_body)
         self._json({"status": "ok"})
 
     def _predict(self, body: dict[str, object]) -> None:
+        node_id = body.get("nodeId")
+        if not node_id:
+            self.send_error(400, "nodeId is required")
+            return
+
+        model_path = Path.cwd() / "models" / f"{node_id}.pt"
+        if not model_path.exists():
+            self.send_error(404, f"No trained model for node {node_id}")
+            return
+
         train = _read_training_rows()
         _, columns, means, stds = _features(train)
         sex = str(body.get("sex", "M")).lower()
@@ -120,7 +153,7 @@ class Handler(BaseHTTPRequestHandler):
             "thal": str(conditions.get("thal", "3")),
         }
         features, _, _, _ = _features(pd.DataFrame([row], columns=FEATURE_COLUMNS), columns, means, stds)
-        checkpoint = torch.load(Path.cwd() / "models" / "clinical_model.pt", map_location="cpu", weights_only=True)
+        checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
         model = ClinicalModel(checkpoint["input_size"])
         model.load_state_dict(checkpoint["state_dict"])
         model.eval()

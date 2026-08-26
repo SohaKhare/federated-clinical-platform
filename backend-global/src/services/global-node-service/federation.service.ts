@@ -278,6 +278,7 @@ async function aggregateRound(record: RoundRecord): Promise<void> {
   }
 
   const globalStoragePath = `${record.roundId}/global.pt`;
+  const deliveredNodeIds: string[] = [];
 
   for (const nodeId of record.targetNodeIds) {
     try {
@@ -287,18 +288,43 @@ async function aggregateRound(record: RoundRecord): Promise<void> {
           "Content-Type": "application/json",
           "X-Federation-Key": env.federationSharedSecret,
         },
-        body: JSON.stringify({ storage_path: globalStoragePath }),
+        body: JSON.stringify({ storage_path: globalStoragePath, nodeId }),
       });
 
       if (!response.ok) {
         throw new Error(`Local node returned status ${response.status}.`);
       }
+
+      deliveredNodeIds.push(nodeId);
     } catch (pushError) {
       console.error(`Failed to push model-ready to node ${nodeId}:`, pushError);
+
+      // A node whose push failed never got the model, so it must not be
+      // marked "synced" by the broadcast below — log the failure directly
+      // instead, or this outage would leave no trace in `logs` at all.
+      const { error } = await supabase.from("logs").upsert(
+        {
+          node_id: nodeId,
+          round: record.round,
+          direction: "outgoing",
+          status: "failed",
+          timestamp: new Date().toISOString(),
+          metadata: roundMetadata(record.roundId, "model-ready-failed", {
+            error: pushError instanceof Error ? pushError.message : String(pushError),
+          }),
+        },
+        { onConflict: "node_id,round,direction" },
+      );
+
+      if (error) {
+        throw new Error(error.message);
+      }
     }
   }
 
-  await broadcastFederatedWeights(record.roundId, {});
+  if (deliveredNodeIds.length > 0) {
+    await broadcastFederatedWeights(record.roundId, { nodeIds: deliveredNodeIds });
+  }
 }
 
 function extractStoragePath(updatePayload: unknown): string | null {

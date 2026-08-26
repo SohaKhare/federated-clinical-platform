@@ -8,7 +8,13 @@ export async function predictPatient(req: Request, res: Response) {
   }
 
   try {
-    const prediction = await predictLocalPatient({ age, sex, symptoms, health_conditions });
+    const prediction = await predictLocalPatient({
+      nodeId: req.user!.userId,
+      age,
+      sex,
+      symptoms,
+      health_conditions,
+    });
     return res.json(prediction);
   } catch (error) {
     console.error("Patient prediction error:", error);

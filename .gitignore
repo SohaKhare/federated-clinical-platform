@@ -57,7 +57,7 @@ data/simulated_hospitals/*
 # Logs
 # =========================
 *.log
-logs/
+
 
 # =========================
 # Node / Next.js

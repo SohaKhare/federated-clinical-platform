@@ -37,13 +37,14 @@ export async function getFederatedStatus(req: Request, res: Response) {
 export async function handleModelReady(req: Request, res: Response) {
   const storagePath =
     typeof req.body?.storage_path === "string" ? req.body.storage_path : undefined;
+  const nodeId = typeof req.body?.nodeId === "string" ? req.body.nodeId : undefined;
 
-  if (!storagePath) {
-    return res.status(400).json({ message: "storage_path is required." });
+  if (!storagePath || !nodeId) {
+    return res.status(400).json({ message: "storage_path and nodeId are required." });
   }
 
   try {
-    await applyGlobalModel(storagePath);
+    await applyGlobalModel(storagePath, nodeId);
 
     return res.json({ status: "ok" });
   } catch (error) {

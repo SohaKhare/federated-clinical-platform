@@ -2,6 +2,8 @@ import { readFile } from "node:fs/promises";
 
 import { supabase } from "../../config/supabase.js";
 import { env } from "../../config/env.js";
+import { getLastCompletedRoundTimestamp } from "./log.service.js";
+import { getPatients } from "./patient.service.js";
 import type { LocalTrainingStartInput } from "../../interfaces/model/federation-round.interface.js";
 import type {
   LocalModelInfo,
@@ -20,6 +22,17 @@ export async function startLocalTraining(
   round: number,
   input: LocalTrainingStartInput = {},
 ) {
+  // Each hospital's patients created/updated since its last completed round
+  // — what the Python side blends into that hospital's training partition.
+  const patientsByNode = await Promise.all(
+    nodeIds.map(async (nodeId) => {
+      const since = await getLastCompletedRoundTimestamp(nodeId);
+      const patients = await getPatients(nodeId, since ?? undefined);
+
+      return { node_id: nodeId, patients };
+    }),
+  );
+
   const response = await fetch(`${env.federatedUrl}/federation/runs`, {
     method: "POST",
     headers: {
@@ -37,6 +50,7 @@ export async function startLocalTraining(
       // service) — global can't read a file path off this machine's disk,
       // so results get relayed through here first. See reportTrainingResult.
       callback_url: `${env.backendUrl}/local/federated/rounds/${roundId}/local-callback`,
+      patients_by_node: patientsByNode,
       config: input.config ?? {},
     }),
   });
@@ -104,7 +118,7 @@ export async function reportTrainingResult(
  * the aggregated model from Supabase itself, then hands the raw bytes to its
  * own local ML service (same machine/LAN) so it becomes the active model.
  */
-export async function applyGlobalModel(storagePath: string): Promise<void> {
+export async function applyGlobalModel(storagePath: string, nodeId: string): Promise<void> {
   const { data, error } = await supabase.storage.from("models").download(storagePath);
 
   if (error) {
@@ -118,6 +132,7 @@ export async function applyGlobalModel(storagePath: string): Promise<void> {
     headers: {
       "Content-Type": "application/octet-stream",
       "X-Federation-Key": env.federationSharedSecret,
+      "X-Node-Id": nodeId,
     },
     body: buffer,
   });
@@ -128,6 +143,7 @@ export async function applyGlobalModel(storagePath: string): Promise<void> {
 }
 
 export async function predictLocalPatient(input: {
+  nodeId: string;
   age: number;
   sex: string;
   symptoms: string[];
