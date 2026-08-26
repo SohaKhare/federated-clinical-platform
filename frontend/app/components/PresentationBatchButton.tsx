@@ -13,14 +13,7 @@ export default function PresentationBatchButton({ onAdded }: { onAdded?: () => v
     setLoading(true);
     setStatus('Loading held-out patients...');
     try {
-      const today = new Date().toISOString().slice(0, 10);
-      const key = `presentation-patients-${today}`;
-      if (localStorage.getItem(key)) {
-        setStatus("Today's presentation batch is already loaded.");
-        return;
-      }
       const batch = await api.getPresentationBatch() as { hospital_id: number; patients: unknown[] };
-      localStorage.setItem(key, 'loaded');
       setAddedCount(batch.patients.length);
       onAdded?.();
       setStatus(`${batch.patients.length} real held-out patients added for Hospital ${batch.hospital_id}.`);
