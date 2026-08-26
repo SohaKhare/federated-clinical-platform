@@ -78,7 +78,7 @@
 
 ## Thursday Checklist
 
-### PPT TODO
+### PPT TODO (Not for Code)
 
 - [ ] Clearer scope and use case in ppt
 - [ ] Display ml scores in ppt
