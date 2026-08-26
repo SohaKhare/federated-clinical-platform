@@ -53,7 +53,7 @@ export async function startTraining(req: Request, res: Response) {
 
   try {
     const result = await startLocalTraining(
-      req.user!.userId,
+      [req.user!.userId],
       roundId,
       req.body.round,
       { ...(config !== undefined ? { config } : {}) } as LocalTrainingStartInput,

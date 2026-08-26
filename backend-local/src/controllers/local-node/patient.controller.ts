@@ -93,15 +93,24 @@ export async function getPresentationBatch(req: Request, res: Response) {
       path.dirname(fileURLToPath(import.meta.url)),
       "../../../../federated/data/heart_presentation_pool.csv",
     );
-    const lines = (await readFile(poolPath, "utf8")).trim().split("\n");
+    // The pool is written by pandas and carries CRLF endings on Windows —
+    // split on both, or the trailing \r glues itself onto the last cell of
+    // every row and header lookups silently return -1.
+    const lines = (await readFile(poolPath, "utf8"))
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
     const headerLine = lines.shift();
     if (!headerLine) {
       throw new Error("Presentation pool is empty.");
     }
-    const headers = headerLine.split(",");
+    const headers = headerLine.split(",").map((header) => header.trim());
     const index = (name: string) => headers.indexOf(name);
     const hospitalIndex = index("hospital_id");
-    const rows = lines.map((line) => line.split(","));
+    if (hospitalIndex === -1) {
+      throw new Error("Presentation pool is missing the hospital_id column.");
+    }
+    const rows = lines.map((line) => line.split(",").map((cell) => cell.trim()));
     const hospitalId = Math.abs(hashUserId(getHospitalId(req))) % 3;
     const available = rows.filter((row) => Number(row[hospitalIndex]) === hospitalId);
     const batch = available.sort(() => Math.random() - 0.5).slice(0, 10 + Math.floor(Math.random() * 11));
@@ -121,9 +130,13 @@ export async function getPresentationBatch(req: Request, res: Response) {
         demo_record: true,
       },
     }, getHospitalId(req))));
-    dailyPresentationBatches.set(batchKey, patients);
+    // Only cache non-empty batches, so a bad/missing pool can be repaired
+    // and retried without restarting the server.
+    if (patients.length > 0) {
+      dailyPresentationBatches.set(batchKey, patients);
+    }
 
-    return res.json({ hospital_id: hospitalId, patients: patients.map(stripHospitalId) });
+    return res.json({ hospital_id: getHospitalId(req), patients: patients.map(stripHospitalId) });
   } catch (error) {
     console.error("Presentation batch error:", error);
     return res.status(500).json({

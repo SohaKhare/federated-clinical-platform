@@ -82,19 +82,23 @@ export async function handleLocalCallback(req: Request, res: Response) {
 
 /**
  * Global pushes this to kick off a round on this node — machine-to-machine,
- * so it takes an explicit nodeId in the body instead of a session.
+ * so it takes explicit nodeIds in the body instead of a session. All target
+ * hospitals arrive in ONE request so the co-located ML service runs a single
+ * training simulation for the whole group.
  */
 export async function handleStartTrainingRemote(req: Request, res: Response) {
   const roundId = typeof req.params.roundId === "string" ? req.params.roundId : undefined;
-  const nodeId = typeof req.body?.nodeId === "string" ? req.body.nodeId : undefined;
+  const nodeIds = readNodeIds(req.body);
   const round = req.body?.round;
 
-  if (!roundId || !nodeId || typeof round !== "number") {
-    return res.status(400).json({ message: "roundId, nodeId, and round are required." });
+  if (!roundId || !nodeIds || typeof round !== "number") {
+    return res.status(400).json({
+      message: "roundId, round, and nodeIds (array of node UUIDs) are required.",
+    });
   }
 
   try {
-    const result = await startLocalTraining(nodeId, roundId, round, {
+    const result = await startLocalTraining(nodeIds, roundId, round, {
       ...(req.body?.config !== undefined ? { config: req.body.config } : {}),
     });
 
@@ -104,4 +108,34 @@ export async function handleStartTrainingRemote(req: Request, res: Response) {
 
     return res.status(502).json({ message: "Unable to reach this node's ML service." });
   }
+}
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function readNodeIds(body: Request["body"]): string[] | null {
+  const raw =
+    body && typeof body === "object"
+      ? Array.isArray((body as Record<string, unknown>).nodeIds)
+        ? ((body as Record<string, unknown>).nodeIds as unknown[])
+        : typeof (body as Record<string, unknown>).nodeId === "string"
+          ? [(body as Record<string, unknown>).nodeId]
+          : null
+      : null;
+
+  if (!raw) {
+    return null;
+  }
+
+  const ids: string[] = [];
+
+  for (const item of raw) {
+    if (typeof item !== "string" || !UUID_PATTERN.test(item)) {
+      return null;
+    }
+
+    ids.push(item);
+  }
+
+  return ids.length > 0 ? ids : null;
 }

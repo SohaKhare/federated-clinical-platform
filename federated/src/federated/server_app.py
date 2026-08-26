@@ -9,7 +9,7 @@ from flwr.serverapp import Grid, ServerApp
 from flwr.serverapp.strategy import FedAvg
 
 from federated.model import ClinicalModel
-from federated.task import input_size
+from federated.task import input_size, participating_clients
 
 
 app = ServerApp()
@@ -18,16 +18,17 @@ app = ServerApp()
 @app.main()
 def main(grid: Grid, context: Context) -> None:
     model = ClinicalModel(input_size())
+    nodes = participating_clients()
     strategy = FedAvg(
         fraction_train=1.0,
         fraction_evaluate=1.0,
-        min_train_nodes=3,
-        min_evaluate_nodes=3,
-        min_available_nodes=3,
+        min_train_nodes=nodes,
+        min_evaluate_nodes=nodes,
+        min_available_nodes=nodes,
     )
     rounds = int(context.run_config.get("num-server-rounds", 3))
     learning_rate = float(context.run_config.get("learning-rate", 0.01))
-    print(f"Starting FedAvg with 3 clients for {rounds} rounds")
+    print(f"Starting FedAvg with {nodes} clients for {rounds} rounds")
     result = strategy.start(
         grid=grid,
         initial_arrays=ArrayRecord(model.state_dict()),

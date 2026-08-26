@@ -15,7 +15,7 @@ import type { Database } from "../../types/supabase.js";
 type LogRow = Database["public"]["Tables"]["logs"]["Row"];
 
 export async function startLocalTraining(
-  nodeId: string,
+  nodeIds: string[],
   roundId: string,
   round: number,
   input: LocalTrainingStartInput = {},
@@ -27,9 +27,10 @@ export async function startLocalTraining(
       "X-Federation-Key": env.federationSharedSecret,
     },
     body: JSON.stringify({
-      // The Python service requires `node_ids` (plural, array) — sending the
-      // singular `node_id` key failed its required-fields check and 400'd.
-      node_ids: [nodeId],
+      // The Python service trains one Flower client per entry and calls back
+      // once per node_id after aggregating — one batched request for the
+      // whole round instead of N concurrent runs racing on the same files.
+      node_ids: nodeIds,
       round_id: roundId,
       round,
       // Points at this node's own backend (co-located with this ML

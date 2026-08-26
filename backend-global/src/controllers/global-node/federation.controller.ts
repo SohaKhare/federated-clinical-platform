@@ -33,38 +33,43 @@ export async function startFederatedRoundController(
   try {
     const result = await startFederatedRound(input);
 
-    // Push the start signal to each node's OWN backend — it's co-located
-    // with that node's ML service and can read the file it produces;
-    // this server calling the ML service directly can't work now that
-    // local and global are genuinely separate servers.
-    const failedNodes: string[] = [];
+    // One batched start signal for all participating hospitals — they share
+    // a single local backend in this deployment, and batching means its ML
+    // service runs ONE simulation covering every node_id instead of N
+    // racing simulations clobbering each other's model files.
+    let reachedLocalBackend = false;
 
-    for (const nodeId of result.round.target_node_ids) {
-      try {
-        const response = await fetch(
-          `${env.localNodeUrl}/local/federated/rounds/${result.round.round_id}/start-training-remote`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Federation-Key": env.federationSharedSecret,
-            },
-            body: JSON.stringify({ nodeId, round: result.round.round }),
+    try {
+      const response = await fetch(
+        `${env.localNodeUrl}/local/federated/rounds/${result.round.round_id}/start-training-remote`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Federation-Key": env.federationSharedSecret,
           },
-        );
+          body: JSON.stringify({
+            nodeIds: result.round.target_node_ids,
+            round: result.round.round,
+          }),
+        },
+      );
 
-        if (!response.ok) {
-          throw new Error(`Local node returned status ${response.status}.`);
-        }
-      } catch (error) {
-        console.error(`Failed to start training on node ${nodeId}:`, error);
-        failedNodes.push(nodeId);
+      reachedLocalBackend = response.ok;
+
+      if (!reachedLocalBackend) {
+        console.error(
+          `Failed to start training on the local backend: status ${response.status}.`,
+        );
       }
+    } catch (error) {
+      console.error("Failed to reach the local backend:", error);
     }
 
-    if (failedNodes.length === result.round.target_node_ids.length) {
+    if (!reachedLocalBackend) {
       return res.status(502).json({
-        message: "Round created, but no local node could be reached to start training.",
+        message:
+          "Round created, but the local backend could not be reached to start training.",
         round: result.round,
       });
     }

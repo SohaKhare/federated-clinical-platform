@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import zlib
 from pathlib import Path
 
@@ -10,13 +11,23 @@ from torch.utils.data import DataLoader, TensorDataset
 
 DATA_PATH = Path(__file__).parents[2] / "data" / "heart_disease_cleveland.csv"
 POOL_PATH = Path(__file__).parents[2] / "data" / "heart_presentation_pool.csv"
-CLIENT_COUNT = 3
 CATEGORICAL = ["sex", "cp", "fbs", "restecg", "exang", "slope", "ca", "thal"]
 NUMERIC = ["age", "trestbps", "chol", "thalach", "oldpeak"]
 FEATURE_COLUMNS = [
     "age", "sex", "cp", "trestbps", "chol", "fbs", "restecg", "thalach",
     "exang", "oldpeak", "slope", "ca", "thal",
 ]
+
+
+def participating_clients(default: int = 3) -> int:
+    """Number of simulated hospital clients for this run.
+
+    federated.service sets FEDERATION_NODE_IDS to the round's real hospital
+    list just before training starts, so this must be read at call time (not
+    import time). Falls back to the standalone default when unset.
+    """
+    raw = os.environ.get("FEDERATION_NODE_IDS", "")
+    return len([node for node in raw.split(",") if node]) or default
 
 
 def _read_training_rows() -> pd.DataFrame:
@@ -30,7 +41,7 @@ def _read_training_rows() -> pd.DataFrame:
 
 
 def assign_client(source_row: int) -> int:
-    return zlib.crc32(str(source_row).encode("utf-8")) % CLIENT_COUNT
+    return zlib.crc32(str(source_row).encode("utf-8")) % participating_clients()
 
 
 def _features(

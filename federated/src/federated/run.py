@@ -2,13 +2,14 @@ from flwr.simulation import run_simulation
 
 from federated.client_app import app as client_app
 from federated.server_app import app as server_app
+from federated.task import participating_clients
 
 
 def run_federated() -> None:
     run_simulation(
         server_app=server_app,
         client_app=client_app,
-        num_supernodes=3,
+        num_supernodes=participating_clients(),
         backend_config={"client_resources": {"num_cpus": 1}},
         verbose_logging=True,
     )
