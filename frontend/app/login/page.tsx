@@ -37,7 +37,7 @@ export default function Login() {
               cursor: 'pointer',
             }}
           >
-            Hospital node
+            Hospital
           </button>
           <button
             type="button"
@@ -53,7 +53,7 @@ export default function Login() {
               cursor: 'pointer',
             }}
           >
-            Global node
+            Global Dashboard
           </button>
         </div>
 
