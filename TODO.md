@@ -76,6 +76,44 @@
 
 ---
 
+## Thursday Checklist
+
+### PPT TODO
+
+- [ ] Clearer scope and use case in ppt
+- [ ] Display ml scores in ppt
+- [ ] Literature survey expand: what exists and how it differs from our platform
+- [ ] Remove ASHA workers voice feature from ppt
+- [ ] Add real dataset to references in ppt
+- [ ] Opacus model accuracy note — mention during ppt presentation
+- [ ] Increase resources and citations
+- [ ] Scalability numbers: avg patients, PH Clinic, taluka, big hospitals (existing counts + patient volumes)
+- [ ] Public health clinics → govt hospitals mapping
+- [ ] All village and city levels implementable without infrastructure issues
+- [ ] Explain why it would help
+- [ ] Changing dataset without issues for private hospitals
+- [ ] Can prevent or handle pandemics
+- [ ] Water pollution, sewage, or air pollution
+- [ ] IEEE format references
+- [ ] Reporting disease that can turn into epidemics
+- [ ] For demo: lifestyle non-communicable diseases (diabetes and heart disease)
+- [ ] Note that this model works for communicable diseases too
+- [ ] Data is not publicly available — model is not just for one disease; idea applies to any disease using trends over few months
+
+### Website TODO
+
+- [ ] Embedding for searching diseases/hospitals
+- [ ] Trends in map — try or remove
+- [ ] Healthcare worker login
+- [ ] UX experience improvements, mobile support
+- [ ] For demo purpose: lifestyle non-communicable disease (diabetes and heart disease)
+- [ ] Model useful for communicable diseases as well
+- [ ] Dataset swappable without issues for private hospitals
+- [ ] Trends of clusters visualization
+- [ ] Reporting disease that can turn into epidemics
+
+---
+
 ## Changes made / Updates log
 
 - [x] Added Flower dependency and verified the Python package import/version output.
