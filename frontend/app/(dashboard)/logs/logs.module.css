@@ -1,0 +1,201 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: 100%;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--color-text-main);
+  margin-bottom: 0.2rem;
+}
+
+.subtitle {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.exportBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--color-text-main);
+  color: white;
+  border: none;
+  padding: 0.7rem 1.2rem;
+  border-radius: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.exportBtn:hover {
+  opacity: 0.9;
+}
+
+.tableCard {
+  background-color: #121212;
+  border-radius: var(--radius-card);
+  padding: 1rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  overflow-x: auto;
+  flex: 1;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #e0e0e0;
+}
+
+.table th {
+  text-align: left;
+  padding: 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #888;
+  border-bottom: 1px solid #333;
+}
+
+.row {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.row:hover {
+  background-color: #1e1e1e;
+}
+
+.table td {
+  padding: 1rem;
+  font-size: 0.85rem;
+  border-bottom: 1px solid #222;
+}
+
+.mono {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  color: #a3a3a3;
+}
+
+.nodeBadge {
+  white-space: nowrap;
+}
+
+.badge {
+  background-color: #2a2a2a;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  color: #ccc;
+  border: 1px solid #444;
+}
+
+.metadataCell {
+  color: #4CAF50;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.chevron {
+  color: #888;
+}
+
+.tx {
+  color: #ff9800;
+  font-weight: 600;
+}
+
+.rx {
+  color: #03a9f4;
+  font-weight: 600;
+}
+
+.expandedRow td {
+  padding: 0;
+  border-bottom: 1px solid #333;
+}
+
+.jsonPreview {
+  background-color: #0a0a0a;
+  margin: 0;
+  padding: 1.5rem;
+  color: #88c0d0;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  border-radius: 0 0 12px 12px;
+}
+
+.innerTableContainer {
+  background-color: #0a0a0a;
+  padding: 1.5rem;
+  border-radius: 0 0 12px 12px;
+}
+
+.innerTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.innerTable td {
+  padding: 0.8rem;
+  border-bottom: 1px solid #1f1f1f;
+}
+
+.innerTable tr:last-child td {
+  border-bottom: none;
+}
+
+.innerKey {
+  color: #88c0d0;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-weight: 600;
+  width: 150px;
+  vertical-align: top;
+}
+
+.innerValue {
+  color: #e0e0e0;
+}
+
+.nestedJson {
+  background-color: #121212;
+  margin: 0;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #222;
+  color: #a3be8c;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+}
+
+.statusConfirmed {
+  background-color: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.statusFailed {
+  background-color: rgba(244, 67, 54, 0.15);
+  color: #f44336;
+  border-color: rgba(244, 67, 54, 0.3);
+}
+
+.statusPending {
+  background-color: rgba(255, 152, 0, 0.15);
+  color: #ff9800;
+  border-color: rgba(255, 152, 0, 0.3);
+}
+
