@@ -64,6 +64,32 @@ export async function getLogs(
   };
 }
 
+/**
+ * When this hospital last finished contributing to a federated round —
+ * the "outgoing"/"synced" log row marks that a round's training result was
+ * successfully reported and the round completed for this node. Used to
+ * find patients created/updated since then (see getPatientsSinceLastRound).
+ */
+export async function getLastCompletedRoundTimestamp(
+  nodeId: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("logs")
+    .select("timestamp")
+    .eq("node_id", nodeId)
+    .eq("direction", "outgoing")
+    .eq("status", "synced")
+    .order("timestamp", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data?.timestamp ?? null;
+}
+
 function toLog(log: LogRow): Log {
   return {
     log_id: log.log_id,

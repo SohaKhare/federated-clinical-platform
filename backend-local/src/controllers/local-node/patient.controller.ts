@@ -12,6 +12,7 @@ import {
   getPatients as getPatientRecords,
   updatePatient as updatePatientRecord,
 } from "../../services/local-node-service/patient.service.js";
+import { getLastCompletedRoundTimestamp } from "../../services/local-node-service/log.service.js";
 import type {
   CreatePatientInput,
   Patient,
@@ -73,6 +74,31 @@ export async function getPatients(req: Request, res: Response) {
 
     return res.status(500).json({
       message: "Unable to fetch patients.",
+    });
+  }
+}
+
+/**
+ * Patients new or changed for this hospital since it last finished
+ * contributing to a federated round — i.e. what the next round should
+ * train on. If this hospital has never completed a round, "since" is null
+ * and every patient it owns qualifies (first-ever contribution).
+ */
+export async function getPatientsSinceLastRound(req: Request, res: Response) {
+  try {
+    const hospitalId = getHospitalId(req);
+    const since = await getLastCompletedRoundTimestamp(hospitalId);
+    const patients = await getPatientRecords(hospitalId, since ?? undefined);
+
+    return res.json({
+      since,
+      patients: patients.map(stripHospitalId),
+    });
+  } catch (error) {
+    console.error("Patients-since-last-round fetch error:", error);
+
+    return res.status(500).json({
+      message: "Unable to fetch patients since the last federated round.",
     });
   }
 }

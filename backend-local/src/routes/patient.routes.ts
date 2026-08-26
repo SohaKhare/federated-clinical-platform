@@ -10,6 +10,7 @@ import {
   addPatientEvent,
   updatePatient,
   getPresentationBatch,
+  getPatientsSinceLastRound,
 } from "../controllers/local-node/patient.controller.js";
 import { extractPatientFromReport } from "../controllers/local-node/ocr.controller.js";
 import { predictPatient } from "../controllers/local-node/predict.controller.js";
@@ -76,6 +77,8 @@ router.use(requireAuth, requireRole("local"));
 router.get("/", getPatients);
 
 router.get("/presentation-batch", getPresentationBatch);
+
+router.get("/since-last-round", getPatientsSinceLastRound);
 
 router.post("/predict", predictPatient);
 

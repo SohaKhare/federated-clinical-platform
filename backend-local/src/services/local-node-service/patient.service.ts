@@ -58,12 +58,23 @@ export async function createPatient(
   return toPatient(createdPatient, snapshot);
 }
 
-export async function getPatients(hospitalId: string): Promise<Patient[]> {
-  const { data: patients, error } = await supabase
+export async function getPatients(
+  hospitalId: string,
+  updatedSince?: string,
+): Promise<Patient[]> {
+  let query = supabase
     .from("patients")
     .select("*")
-    .eq("hospital_id", hospitalId)
-    .order("updated_at", { ascending: false });
+    .eq("hospital_id", hospitalId);
+
+  // updated_at is bumped on any change to a patient (identity fields here,
+  // or a clinical change recorded in patient_events) — so this naturally
+  // covers both brand-new patients and ones edited since the cutoff.
+  if (updatedSince) {
+    query = query.gt("updated_at", updatedSince);
+  }
+
+  const { data: patients, error } = await query.order("updated_at", { ascending: false });
 
   if (error) {
     throw new Error(error.message);
