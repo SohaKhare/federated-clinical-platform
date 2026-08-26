@@ -27,7 +27,17 @@ export const env = {
 
   nodeEnv: process.env.NODE_ENV ?? "development",
 
-  sessionSecret: requiredEnv("SESSION_SECRET"),
+  // Reuses the existing SESSION_SECRET env var to sign JWTs, so no .env
+  // changes are needed when swapping express-session out for stateless auth.
+  jwt: {
+    secret: requiredEnv("SESSION_SECRET"),
+    expiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
+  },
+
+  // Name of the httpOnly cookie the signed JWT is stored in. Override per
+  // backend via .env so multiple nodes on "localhost" don't clobber each
+  // other's cookie — the code itself is identical across nodes.
+  authCookieName: process.env.AUTH_COOKIE_NAME ?? "fcp_token",
 
   frontendUrl: process.env.FRONTEND_URL ?? "http://localhost:3000",
 

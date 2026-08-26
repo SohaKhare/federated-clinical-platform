@@ -281,7 +281,7 @@ async function aggregateRound(record: RoundRecord): Promise<void> {
 
   for (const nodeId of record.targetNodeIds) {
     try {
-      const response = await fetch(`${env.localNodeUrl}/federated/rounds/${record.roundId}/model-ready`, {
+      const response = await fetch(`${env.localNodeUrl}/local/federated/rounds/${record.roundId}/model-ready`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

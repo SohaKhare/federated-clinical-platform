@@ -12,7 +12,7 @@ router.get(
   (req, res) => {
     res.json({
       role: "global",
-      user: req.session.user?.email,
+      user: req.user?.email,
       message: "Federated server dashboard data.",
     });
   },
@@ -22,7 +22,7 @@ router.get(
 router.get("/hospital/summary", requireAuth, requireRole("local"), (req, res) => {
   res.json({
     role: "local",
-    user: req.session.user?.email,
+    user: req.user?.email,
     message: "Local institution dashboard data.",
   });
 });

@@ -1,11 +1,14 @@
 "use client";
+import { useState } from 'react';
 import styles from './login.module.css';
 import { Shield } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, type UserRole } from '@/lib/api';
 
 export default function Login() {
+  const [role, setRole] = useState<UserRole>('local');
+
   const handleGoogleLogin = () => {
-    api.loginWithGoogle();
+    api.loginWithGoogle(role);
   };
 
   return (
@@ -15,7 +18,44 @@ export default function Login() {
           <Shield size={32} color="#000" />
         </div>
         <h2 className={styles.title}>Welcome back</h2>
-        <p className={styles.subtitle}>Sign in to access the local node</p>
+        <p className={styles.subtitle}>
+          {role === 'local' ? 'Sign in to access the local node' : 'Sign in to access the global node'}
+        </p>
+
+        <div style={{ display: 'flex', gap: 8, width: '100%', marginBottom: 8 }}>
+          <button
+            type="button"
+            onClick={() => setRole('local')}
+            style={{
+              flex: 1,
+              padding: '0.6rem',
+              borderRadius: 10,
+              border: role === 'local' ? '2px solid #000' : '1px solid #e0e0e0',
+              background: '#fff',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+            }}
+          >
+            Hospital node
+          </button>
+          <button
+            type="button"
+            onClick={() => setRole('global')}
+            style={{
+              flex: 1,
+              padding: '0.6rem',
+              borderRadius: 10,
+              border: role === 'global' ? '2px solid #000' : '1px solid #e0e0e0',
+              background: '#fff',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+            }}
+          >
+            Global node
+          </button>
+        </div>
 
         <div className={styles.form}>
           <button 

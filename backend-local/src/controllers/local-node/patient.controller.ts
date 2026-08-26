@@ -26,10 +26,10 @@ const dailyPresentationBatches = new Map<string, Patient[]>();
 
 /**
  * requireAuth + requireRole("local") run before every handler in this file,
- * so req.session.user is always present here.
+ * so req.user is always present here.
  */
 function getHospitalId(req: Request): string {
-  return req.session.user!.userId;
+  return req.user!.userId;
 }
 
 /**

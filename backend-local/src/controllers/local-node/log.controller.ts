@@ -23,7 +23,7 @@ export async function getLogs(req: Request, res: Response) {
   }
 
   try {
-    const nodeId = req.session.user!.userId;
+    const nodeId = req.user!.userId;
     const { logs, pagination } = await getLogsRecords(nodeId, filters);
 
     return res.json({ logs, pagination });

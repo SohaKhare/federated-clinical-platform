@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import session from "express-session";
+import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.routes.js";
 import demoRoutes from "./routes/demo.routes.js";
 import { env } from "./config/env.js";
@@ -29,25 +29,9 @@ app.use(
 // keep the default express.json() limit generous enough for that.
 app.use(express.json({ limit: "10mb" }));
 
-app.use(
-  session({
-    secret: env.sessionSecret,
-
-    resave: false,
-
-    saveUninitialized: false,
-
-    cookie: {
-      httpOnly: true,
-
-      secure: env.nodeEnv === "production",
-
-      sameSite: "lax",
-
-      maxAge: 1000 * 60 * 60 * 24,
-    },
-  }),
-);
+// Auth is a stateless signed JWT stored in an httpOnly cookie — no
+// server-side session store, so nothing to lose on a restart.
+app.use(cookieParser());
 
 app.get("/", (_req, res) => {
   res.json({
@@ -63,20 +47,22 @@ app.get("/health", (_req, res) => {
   });
 });
 
+// Registered as this node's OAuth redirect URI in the Google Cloud Console —
+// stays unprefixed so login doesn't break.
 app.use("/auth", authRoutes);
 
-app.use("/patients", patientRoutes);
+app.use("/local/patients", patientRoutes);
 
-app.use("/api", demoRoutes);
+app.use("/local/api", demoRoutes);
 
-app.use("/logs", logRoutes);
+app.use("/local/logs", logRoutes);
 
-app.use("/research", researchRoutes);
+app.use("/local/research", researchRoutes);
 
-app.use("/privacy", privacyRoutes);
+app.use("/local/privacy", privacyRoutes);
 
-app.use("/federated", federatedRoutes);
+app.use("/local/federated", federatedRoutes);
 
-app.use("/model", modelRoutes);
+app.use("/local/model", modelRoutes);
 
 export default app;

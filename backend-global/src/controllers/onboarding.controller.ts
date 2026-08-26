@@ -4,7 +4,7 @@ import { completeOnboarding } from "../services/user.service.js";
 import type { OnboardingInput } from "../interfaces/model/user.interface.js";
 
 export async function onboardUser(req: Request, res: Response) {
-  const userId = req.session.user?.userId;
+  const userId = req.user?.userId;
 
   if (!userId || !isOnboardingInput(req.body)) {
     return res.status(400).json({
@@ -13,8 +13,9 @@ export async function onboardUser(req: Request, res: Response) {
   }
 
   try {
+    // Nothing to update in the token itself — it only carries the user id —
+    // the frontend re-reads the fresh row via /auth/me after this resolves.
     const user = await completeOnboarding(userId, req.body);
-    req.session.user = user;
 
     return res.json({ user });
   } catch (error) {

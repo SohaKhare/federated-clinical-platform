@@ -4,7 +4,7 @@ import { getPrivacyParameters as getPrivacyParametersRecord } from "../../servic
 
 export async function getPrivacyParameters(req: Request, res: Response) {
   try {
-    const parameters = await getPrivacyParametersRecord(req.session.user!.userId);
+    const parameters = await getPrivacyParametersRecord(req.user!.userId);
 
     return res.json(parameters);
   } catch (error) {

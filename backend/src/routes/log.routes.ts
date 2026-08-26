@@ -18,7 +18,7 @@ router.use(requireAuth);
  * sees every hospital's logs at once (global-node/log.controller.ts).
  */
 router.get("/", (req, res) => {
-  if (req.session.user!.role === "global") {
+  if (req.user!.role === "global") {
     return getAllLogs(req, res);
   }
 

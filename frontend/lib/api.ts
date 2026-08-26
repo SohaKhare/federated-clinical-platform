@@ -1,7 +1,16 @@
 // API client for the Federated Clinical Platform backend.
-// All endpoints below are implemented in the backend (see backend/testing_io.md).
+//
+// Two backends exist — the local hospital node (:8000) and the global
+// aggregator (:8010) — and each mounts its resource routes under a matching
+// path prefix (/local/*, /global/*; /auth/* stays unprefixed on both, since
+// it's registered as the OAuth redirect URI in the Google Cloud Console).
+// Which one a request goes to is decided by the signed-in user's role,
+// cached in localStorage so a hard refresh knows where to ask before the
+// first /auth/me comes back.
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { BASE_URLS, getStoredRole, setStoredRole, clearStoredRole, type UserRole } from './role';
+
+export { getStoredRole, type UserRole };
 
 export class ApiError extends Error {
   status: number;
@@ -12,8 +21,12 @@ export class ApiError extends Error {
   }
 }
 
+function activeBaseUrl(): string {
+  return BASE_URLS[getStoredRole()];
+}
+
 async function fetcher<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_URL}${endpoint}`, {
+  const res = await fetch(`${activeBaseUrl()}${endpoint}`, {
     ...options,
     headers: {
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),
@@ -53,8 +66,6 @@ function qs(params: Record<string, string | number | undefined>): string {
 }
 
 // ---------- Types ----------
-
-export type UserRole = 'local' | 'global';
 
 export interface AuthUser {
   userId: string;
@@ -282,21 +293,32 @@ export interface FederatedRoundSnapshot {
 // ---------- API ----------
 
 export const api = {
-  // --- AUTH ---
-  loginWithGoogle: () => {
+  // --- AUTH (unprefixed on both backends) ---
+
+  /** Sign in against a specific backend. Pinning the role before navigating
+   * away means the page that gets redirected back to already knows which
+   * node's cookie to expect. */
+  loginWithGoogle: (role: UserRole = getStoredRole()) => {
+    setStoredRole(role);
     // Full-page navigation to the backend OAuth entry point (cross-origin by design).
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    window.location.href = `${API_URL}/auth/google`;
+    window.location.href = `${BASE_URLS[role]}/auth/google`;
   },
 
   logout: async () => {
-    return fetcher<{ message?: string }>('/auth/logout', { method: 'POST' });
+    try {
+      return await fetcher<{ message?: string }>('/auth/logout', { method: 'POST' });
+    } finally {
+      clearStoredRole();
+    }
   },
 
-  /** Returns the session user, or null when not authenticated (401). */
+  /** Returns the session user, or null when not authenticated (401). Also
+   * corrects the cached role if it doesn't match what the database says. */
   getMe: async (): Promise<AuthUser | null> => {
     try {
       const data = await fetcher<{ authenticated: boolean; user: AuthUser }>('/auth/me');
+      if (data.authenticated) setStoredRole(data.user.role);
       return data.authenticated ? data.user : null;
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) return null;
@@ -312,19 +334,19 @@ export const api = {
     return data.user;
   },
 
-  // --- PATIENTS ---
+  // --- PATIENTS (local node) ---
   getPatients: async () => {
-    const res = await fetcher<{ patients: Patient[] }>('/patients', { method: 'GET' });
+    const res = await fetcher<{ patients: Patient[] }>('/local/patients', { method: 'GET' });
     return res.patients || [];
   },
 
   getPatient: async (id: string): Promise<Patient> => {
-    const data = await fetcher<{ patient: Patient }>(`/patients/${id}`);
+    const data = await fetcher<{ patient: Patient }>(`/local/patients/${id}`);
     return data.patient;
   },
 
   createPatient: async (input: NewPatientInput): Promise<Patient> => {
-    const data = await fetcher<{ patient: Patient }>('/patients', {
+    const data = await fetcher<{ patient: Patient }>('/local/patients', {
       method: 'POST',
       body: JSON.stringify(input),
     });
@@ -332,7 +354,7 @@ export const api = {
   },
 
   updatePatient: async (id: string, input: PatientUpdateInput): Promise<Patient> => {
-    const data = await fetcher<{ patient: Patient }>(`/patients/${id}`, {
+    const data = await fetcher<{ patient: Patient }>(`/local/patients/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(input),
     });
@@ -340,12 +362,12 @@ export const api = {
   },
 
   getPatientEvents: async (id: string): Promise<PatientEvent[]> => {
-    const data = await fetcher<{ events: PatientEvent[] }>(`/patients/${id}/events`);
+    const data = await fetcher<{ events: PatientEvent[] }>(`/local/patients/${id}/events`);
     return data.events;
   },
 
   addPatientEvent: async (id: string, input: AddEventInput): Promise<PatientEvent> => {
-    const data = await fetcher<{ event: PatientEvent }>(`/patients/${id}/events`, {
+    const data = await fetcher<{ event: PatientEvent }>(`/local/patients/${id}/events`, {
       method: 'POST',
       body: JSON.stringify(input),
     });
@@ -362,7 +384,7 @@ export const api = {
       heart_disease: boolean;
     }>;
   }> => {
-    return fetcher('/patients/presentation-batch');
+    return fetcher('/local/patients/presentation-batch');
   },
   predictPatient: async (input: {
     age: number;
@@ -370,95 +392,97 @@ export const api = {
     symptoms: string[];
     health_conditions?: HealthConditions;
   }): Promise<{ prediction: boolean; probability: number }> => {
-    return fetcher('/patients/predict', { method: 'POST', body: JSON.stringify(input) });
+    return fetcher('/local/patients/predict', { method: 'POST', body: JSON.stringify(input) });
   },
 
-  // --- LOGS ---
+  // --- LOGS (both nodes serve /logs at their own prefix — follows the
+  // active role, since that decides which backend is even reachable) ---
   getLogs: async (params: { direction?: string; status?: string; round?: number; page?: number; pageSize?: number } = {}): Promise<LogsResponse> => {
-    return fetcher<LogsResponse>(`/logs${qs(params)}`);
+    return fetcher<LogsResponse>(`/${getStoredRole()}/logs${qs(params)}`);
   },
 
+  // --- LOGS (global node only) ---
   getNodeLogs: async (nodeId: string, params: { direction?: string; status?: string; round?: number; page?: number; pageSize?: number } = {}): Promise<LogsResponse> => {
-    return fetcher<LogsResponse>(`/logs/${nodeId}${qs(params)}`);
+    return fetcher<LogsResponse>(`/global/logs/${nodeId}${qs(params)}`);
   },
 
   getRoundLogs: async (roundId: string, params: { direction?: string; status?: string; page?: number; pageSize?: number } = {}): Promise<LogsResponse> => {
-    return fetcher<LogsResponse>(`/logs/round/${roundId}${qs(params)}`);
+    return fetcher<LogsResponse>(`/global/logs/round/${roundId}${qs(params)}`);
   },
 
-  // --- MODEL ---
+  // --- MODEL (local node) ---
   getModelInfo: async (): Promise<LocalModelInfo> => {
-    return fetcher<LocalModelInfo>('/model');
+    return fetcher<LocalModelInfo>('/local/model');
   },
   getModelMetrics: async (): Promise<LocalModelMetrics> => {
-    return fetcher<LocalModelMetrics>('/model/metrics');
+    return fetcher<LocalModelMetrics>('/local/model/metrics');
   },
 
   // --- FEDERATED (local node) ---
   getFederatedStatus: async (): Promise<NodeStatus> => {
-    return fetcher<NodeStatus>('/federated/status');
+    return fetcher<NodeStatus>('/local/federated/status');
   },
 
   startTraining: async (roundId: string, input: { round: number; config?: Record<string, unknown> }) => {
-    return fetcher<unknown>(`/federated/rounds/${roundId}/start-training`, {
+    return fetcher<unknown>(`/local/federated/rounds/${roundId}/start-training`, {
       method: 'POST',
       body: JSON.stringify(input),
     });
   },
 
   // --- FEDERATED (global node) ---
-  getGlobalRounds: async () => fetcher('/api/federated/rounds', { method: 'GET' }),
-  startGlobalRound: async (targetNodeIds?: string[]) => fetcher('/api/federated/rounds/start', {
+  getGlobalRounds: async () => fetcher('/global/api/federated/rounds', { method: 'GET' }),
+  startGlobalRound: async (targetNodeIds?: string[]) => fetcher('/global/api/federated/rounds/start', {
     method: 'POST',
     body: JSON.stringify(targetNodeIds ? { targetNodeIds } : {}),
   }),
   getGlobalRound: async (roundId: string): Promise<{ round: FederatedRoundSnapshot }> =>
-    fetcher(`/api/federated/rounds/${roundId}`, { method: 'GET' }),
-  broadcastGlobalWeights: async (roundId: string) => fetcher(`/api/federated/rounds/${roundId}/broadcast`, {
+    fetcher(`/global/api/federated/rounds/${roundId}`, { method: 'GET' }),
+  broadcastGlobalWeights: async (roundId: string) => fetcher(`/global/api/federated/rounds/${roundId}/broadcast`, {
     method: 'POST',
     body: JSON.stringify({ notes: 'Global Flower model broadcast to participating hospitals.' }),
   }),
 
-  // --- PRIVACY ---
+  // --- PRIVACY (local node) ---
   getPrivacyParameters: async (): Promise<PrivacyParameters> => {
-    return fetcher<PrivacyParameters>('/privacy/parameters');
+    return fetcher<PrivacyParameters>('/local/privacy/parameters');
   },
 
-  // --- RESEARCH ---
+  // --- RESEARCH (local node) ---
   getResearchSummary: async (): Promise<ResearchSummary> => {
-    return fetcher<ResearchSummary>('/research/summary');
+    return fetcher<ResearchSummary>('/local/research/summary');
   },
 
   getResearchInsights: async (): Promise<ResearchInsights> => {
-    return fetcher<ResearchInsights>('/research/insights');
+    return fetcher<ResearchInsights>('/local/research/insights');
   },
 
-  // --- GLOBAL NODE ---
+  // --- NODES (global node) ---
   getNodes: async (): Promise<FederatedNode[]> => {
-    const data = await fetcher<{ nodes: FederatedNode[] }>('/nodes');
+    const data = await fetcher<{ nodes: FederatedNode[] }>('/global/nodes');
     return data.nodes;
   },
 
   getNode: async (id: string): Promise<NodeDetails> => {
-    const data = await fetcher<{ node: NodeDetails }>(`/nodes/${id}`);
+    const data = await fetcher<{ node: NodeDetails }>(`/global/nodes/${id}`);
     return data.node;
   },
 
   getNodeStatus: async (id: string): Promise<NodeStatus> => {
-    return fetcher<NodeStatus>(`/nodes/${id}/status`);
+    return fetcher<NodeStatus>(`/global/nodes/${id}/status`);
   },
 
   getNodeMetrics: async (id: string): Promise<NodeMetrics> => {
-    return fetcher<NodeMetrics>(`/nodes/${id}/metrics`);
+    return fetcher<NodeMetrics>(`/global/nodes/${id}/metrics`);
   },
 
   // --- GLOBAL FEDERATED ROUNDS ---
   getFederatedRounds: async (): Promise<FederatedRoundSnapshot[]> => {
-    const data = await fetcher<{ rounds: FederatedRoundSnapshot[] }>('/api/federated/rounds');
+    const data = await fetcher<{ rounds: FederatedRoundSnapshot[] }>('/global/api/federated/rounds');
     return data.rounds;
   },
 
   getFederatedRound: async (roundId: string): Promise<FederatedRoundSnapshot> => {
-    return fetcher<FederatedRoundSnapshot>(`/api/federated/rounds/${roundId}`);
+    return fetcher<FederatedRoundSnapshot>(`/global/api/federated/rounds/${roundId}`);
   },
 };

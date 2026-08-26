@@ -12,7 +12,7 @@ const UUID_PATTERN =
 
 export async function getModelInfo(req: Request, res: Response) {
   try {
-    const info = await getLocalModelInfo(req.session.user!.userId);
+    const info = await getLocalModelInfo(req.user!.userId);
 
     return res.json(info);
   } catch (error) {
@@ -24,7 +24,7 @@ export async function getModelInfo(req: Request, res: Response) {
 
 export async function getModelMetrics(req: Request, res: Response) {
   try {
-    const metrics = await getLocalModelMetrics(req.session.user!.userId);
+    const metrics = await getLocalModelMetrics(req.user!.userId);
 
     return res.json(metrics);
   } catch (error) {
@@ -53,7 +53,7 @@ export async function startTraining(req: Request, res: Response) {
 
   try {
     const result = await startLocalTraining(
-      req.session.user!.userId,
+      req.user!.userId,
       roundId,
       req.body.round,
       { ...(config !== undefined ? { config } : {}) } as LocalTrainingStartInput,

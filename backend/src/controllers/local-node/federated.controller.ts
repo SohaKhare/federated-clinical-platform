@@ -10,7 +10,7 @@ import { applyGlobalModel } from "../../services/local-node-service/ml.service.j
  */
 export async function getFederatedStatus(req: Request, res: Response) {
   try {
-    const status = await getNodeStatus(req.session.user!.userId);
+    const status = await getNodeStatus(req.user!.userId);
 
     if (!status) {
       return res.status(404).json({

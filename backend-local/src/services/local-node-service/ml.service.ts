@@ -27,13 +27,15 @@ export async function startLocalTraining(
       "X-Federation-Key": env.federationSharedSecret,
     },
     body: JSON.stringify({
-      node_id: nodeId,
+      // The Python service requires `node_ids` (plural, array) — sending the
+      // singular `node_id` key failed its required-fields check and 400'd.
+      node_ids: [nodeId],
       round_id: roundId,
       round,
       // Points at this node's own backend (co-located with this ML
       // service) — global can't read a file path off this machine's disk,
       // so results get relayed through here first. See reportTrainingResult.
-      callback_url: `${env.backendUrl}/federated/rounds/${roundId}/local-callback`,
+      callback_url: `${env.backendUrl}/local/federated/rounds/${roundId}/local-callback`,
       config: input.config ?? {},
     }),
   });
@@ -78,7 +80,7 @@ export async function reportTrainingResult(
     storagePath = data.path;
   }
 
-  const response = await fetch(`${env.globalNodeUrl}/api/federated/rounds/${roundId}/callback`, {
+  const response = await fetch(`${env.globalNodeUrl}/global/api/federated/rounds/${roundId}/callback`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

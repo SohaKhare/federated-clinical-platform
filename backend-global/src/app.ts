@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import session from "express-session";
+import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.routes.js";
 import demoRoutes from "./routes/demo.routes.js";
 import { env } from "./config/env.js";
@@ -24,25 +24,9 @@ app.use(
 
 app.use(express.json());
 
-app.use(
-  session({
-    secret: env.sessionSecret,
-
-    resave: false,
-
-    saveUninitialized: false,
-
-    cookie: {
-      httpOnly: true,
-
-      secure: env.nodeEnv === "production",
-
-      sameSite: "lax",
-
-      maxAge: 1000 * 60 * 60 * 24,
-    },
-  }),
-);
+// Auth is a stateless signed JWT stored in an httpOnly cookie — no
+// server-side session store, so nothing to lose on a restart.
+app.use(cookieParser());
 
 app.get("/", (_req, res) => {
   res.json({
@@ -58,14 +42,16 @@ app.get("/health", (_req, res) => {
   });
 });
 
+// Registered as this node's OAuth redirect URI in the Google Cloud Console —
+// stays unprefixed so login doesn't break.
 app.use("/auth", authRoutes);
 
-app.use("/api", demoRoutes);
+app.use("/global/api", demoRoutes);
 
-app.use("/nodes", nodeRoutes);
+app.use("/global/nodes", nodeRoutes);
 
-app.use("/logs", logRoutes);
+app.use("/global/logs", logRoutes);
 
-app.use("/api/federated", globalFederatedRoutes);
+app.use("/global/api/federated", globalFederatedRoutes);
 
 export default app;

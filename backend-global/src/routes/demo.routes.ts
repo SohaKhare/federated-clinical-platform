@@ -7,7 +7,7 @@ const router = Router();
 router.get("/federated/status", requireAuth, requireRole("global"), (req, res) => {
   res.json({
     role: "global",
-    user: req.session.user?.email,
+    user: req.user?.email,
     message: "Federated server dashboard data.",
   });
 });

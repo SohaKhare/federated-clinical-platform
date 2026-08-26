@@ -1,15 +1,43 @@
 import type { NextFunction, Request, Response } from "express";
 
 import type { UserRole } from "../auth/roles.js";
+import { env } from "../config/env.js";
+import { verifyAuthToken } from "../config/jwt.js";
+import { getUserById } from "../services/user.service.js";
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!req.session.user) {
+/**
+ * Verifies the JWT in the auth cookie and attaches the current user to
+ * `req.user`. The token only carries a user id — the row is re-read on
+ * every request, since role/onboarded can change after the token was issued
+ * (role is promoted by editing the database directly).
+ */
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const token = req.cookies?.[env.authCookieName];
+  const payload = token ? verifyAuthToken(token) : null;
+
+  if (!payload) {
     return res.status(401).json({
       message: "Authentication required.",
     });
   }
 
-  next();
+  try {
+    const user = await getUserById(payload.userId);
+
+    if (!user) {
+      return res.status(401).json({
+        message: "Authentication required.",
+      });
+    }
+
+    req.user = user;
+
+    next();
+  } catch (error) {
+    console.error("Failed to resolve authenticated user:", error);
+
+    return res.status(500).json({ message: "Unable to verify the current user." });
+  }
 }
 
 /**
@@ -21,7 +49,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
  */
 export function requireRole(...roles: UserRole[]) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const user = req.session.user;
+    const user = req.user;
 
     if (!user) {
       return res.status(401).json({

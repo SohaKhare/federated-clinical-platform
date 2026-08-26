@@ -7,7 +7,7 @@ const router = Router();
 router.get("/hospital/summary", requireAuth, requireRole("local"), (req, res) => {
   res.json({
     role: "local",
-    user: req.session.user?.email,
+    user: req.user?.email,
     message: "Local institution dashboard data.",
   });
 });

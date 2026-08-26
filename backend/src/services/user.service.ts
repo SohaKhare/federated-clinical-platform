@@ -57,6 +57,22 @@ export async function completeOnboarding(
   return toUserSession(data);
 }
 
+/** Re-reads a user's current row — the JWT only carries a user id, so every
+ * authenticated request resolves the live role/onboarded state from here. */
+export async function getUserById(userId: string): Promise<UserSession | null> {
+  const { data, error } = await supabase
+    .from("users")
+    .select()
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data ? toUserSession(data) : null;
+}
+
 function toUserSession(user: UserRow): UserSession {
   if (!isValidRole(user.role)) {
     throw new Error(`User ${user.user_id} has an invalid role: ${user.role}`);

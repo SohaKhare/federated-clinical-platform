@@ -42,7 +42,7 @@ export async function startFederatedRoundController(
     for (const nodeId of result.round.target_node_ids) {
       try {
         const response = await fetch(
-          `${env.localNodeUrl}/federated/rounds/${result.round.round_id}/start-training-remote`,
+          `${env.localNodeUrl}/local/federated/rounds/${result.round.round_id}/start-training-remote`,
           {
             method: "POST",
             headers: {

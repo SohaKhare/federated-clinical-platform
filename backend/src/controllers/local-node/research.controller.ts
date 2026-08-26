@@ -7,7 +7,7 @@ import {
 
 export async function getResearchSummary(req: Request, res: Response) {
   try {
-    const summary = await getResearchSummaryRecord(req.session.user!.userId);
+    const summary = await getResearchSummaryRecord(req.user!.userId);
 
     return res.json(summary);
   } catch (error) {
@@ -19,7 +19,7 @@ export async function getResearchSummary(req: Request, res: Response) {
 
 export async function getResearchInsights(req: Request, res: Response) {
   try {
-    const insights = await getResearchInsightsRecord(req.session.user!.userId);
+    const insights = await getResearchInsightsRecord(req.user!.userId);
 
     return res.json(insights);
   } catch (error) {
