@@ -1,4 +1,5 @@
 "use client";
+import { useState } from 'react';
 import styles from './page.module.css';
 import PlatformSummary from '../components/PlatformSummary';
 import SummaryChart from '../components/SummaryChart';
@@ -12,26 +13,38 @@ import { useAuth } from '@/lib/useAuth';
 export default function Dashboard() {
   const { user } = useAuth();
   const isGlobal = user?.role === 'global';
+  const [showAddPatientModal, setShowAddPatientModal] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   return (
     <div className={styles.contentGrid}>
       <div className={styles.leftColumn}>
-        {/* Platform / Federation Summary Stats */}
-        <PlatformSummary />
+        {/* Top Platform / Clinical Summary with Action Buttons */}
+        <PlatformSummary onAddPatient={() => setShowAddPatientModal(true)} />
 
         {/* Summary Chart */}
-        <SummaryChart />
+        <SummaryChart key={`chart-${refreshKey}`} />
 
-        {/* Bottom Grid: Area Stats, Logs Widget, Heatmap Widget */}
+        {/* Bottom Grid: Demographics/Area Stats, Logs Widget, Heatmap Widget */}
         <div className={styles.bottomGrid}>
-          <AreaStats />
+          <AreaStats key={`stats-${refreshKey}`} />
           <LogsWidget />
           <HeatmapWidget />
         </div>
       </div>
 
       {/* Right Panel: Role-Specific Management */}
-      {isGlobal ? <NodeManagement /> : <PatientManagement />}
+      <div className={styles.rightColumn}>
+        {isGlobal ? (
+          <NodeManagement />
+        ) : (
+          <PatientManagement
+            showModalExternal={showAddPatientModal}
+            onCloseModal={() => setShowAddPatientModal(false)}
+            onPatientAdded={() => setRefreshKey((k) => k + 1)}
+          />
+        )}
+      </div>
     </div>
   );
 }

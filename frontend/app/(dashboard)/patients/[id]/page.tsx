@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import styles from '../../../components/SharedCards.module.css';
 import detailStyles from './detail.module.css';
 import { api, type Patient, type PatientEvent } from '@/lib/api';
+import { useToast } from '@/lib/ToastContext';
 
 const formatDateTime = (iso: string) =>
   new Date(iso).toLocaleString('en-GB', {
@@ -31,6 +32,7 @@ function formatEventData(data: Record<string, unknown>): string {
 export default function PatientDetailsPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
+  const { success, error: toastError } = useToast();
 
   const [patient, setPatient] = useState<Patient | null>(null);
   const [events, setEvents] = useState<PatientEvent[]>([]);
@@ -83,11 +85,14 @@ export default function PatientDetailsPage() {
         eventData: { details: eventDetails.trim() },
         ...(occurredAt ? { occurredAt: new Date(occurredAt).toISOString() } : {}),
       });
+      success('Clinical event recorded successfully!');
       setEventDetails('');
       setOccurredAt('');
       await loadEvents();
     } catch (err) {
-      setEventError(err instanceof Error ? err.message : 'Failed to add event');
+      const msg = err instanceof Error ? err.message : 'Failed to add event';
+      setEventError(msg);
+      toastError(msg);
     } finally {
       setAddingEvent(false);
     }

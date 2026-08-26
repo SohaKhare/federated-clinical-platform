@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { api } from '../../lib/api';
+import { useToast } from '../../lib/ToastContext';
 import styles from './PresentationBatchButton.module.css';
 
 export default function PresentationBatchButton({ onAdded }: { onAdded?: () => void }) {
   const [status, setStatus] = useState('');
   const [addedCount, setAddedCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const { success, error: toastError } = useToast();
 
   async function addDailyBatch() {
     setLoading(true);
@@ -16,10 +18,14 @@ export default function PresentationBatchButton({ onAdded }: { onAdded?: () => v
       const batch = await api.getPresentationBatch() as { hospital_id: number; patients: unknown[] };
       setAddedCount(batch.patients.length);
       onAdded?.();
-      setStatus(`${batch.patients.length} real held-out patients added for Hospital ${batch.hospital_id}.`);
+      const msg = `${batch.patients.length} held-out patients successfully added for Hospital ${batch.hospital_id}!`;
+      setStatus(msg);
+      success(msg);
     } catch (error) {
       console.error('Presentation batch error:', error);
-      setStatus('Could not load the presentation pool.');
+      const errMsg = 'Could not load the presentation pool.';
+      setStatus(errMsg);
+      toastError(errMsg);
     } finally {
       setLoading(false);
     }

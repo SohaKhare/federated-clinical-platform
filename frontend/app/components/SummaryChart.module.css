@@ -59,11 +59,11 @@
 .chartContainer {
   background-color: var(--color-green-light);
   border-radius: var(--radius-main);
-  padding: 1.5rem;
-  padding-bottom: 3rem;
+  padding: 1.75rem 2rem;
+  padding-bottom: 2.5rem;
   display: flex;
   flex-direction: column;
-  height: 310px;
+  min-height: 330px;
 }
 
 .chartHeader {

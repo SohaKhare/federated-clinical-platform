@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, type NewPatientInput, type Patient } from '@/lib/api';
 import PresentationBatchButton from '../../components/PresentationBatchButton';
+import { useToast } from '@/lib/ToastContext';
 import styles from './doctor.module.css';
 
 const emptyForm: NewPatientInput = {
@@ -17,6 +18,7 @@ export default function DoctorPage() {
   const [prediction, setPrediction] = useState<{ prediction: boolean; probability: number } | null>(null);
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
+  const { success, error: toastError, info } = useToast();
 
   const loadPatients = useCallback(async () => {
     try { setPatients(await api.getPatients()); }
@@ -46,20 +48,34 @@ export default function DoctorPage() {
     setSaving(true); setMessage('');
     try {
       const input = readForm();
-      if (selectedId) await api.updatePatient(selectedId, input);
-      else await api.createPatient(input);
-      setMessage(selectedId ? 'Patient updated locally.' : 'Patient added to this hospital.');
+      if (selectedId) {
+        await api.updatePatient(selectedId, input);
+        success(`Patient "${input.name}" successfully updated locally.`);
+      } else {
+        await api.createPatient(input);
+        success(`Patient "${input.name}" successfully added to local hospital node.`);
+      }
       setSelectedId(''); setForm(emptyForm); setSymptomsText(''); await loadPatients();
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'Unable to save patient.'); }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unable to save patient.';
+      setMessage(msg);
+      toastError(msg);
+    }
     finally { setSaving(false); }
   }
 
   async function runPrediction() {
     setSaving(true); setMessage('Running the local PyTorch model...');
+    info('Running local PyTorch model evaluation...');
     try {
-      setPrediction(await api.predictPatient(readForm()));
-      setMessage('Prediction completed locally.');
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'Unable to run prediction.'); }
+      const res = await api.predictPatient(readForm());
+      setPrediction(res);
+      success(`Prediction completed: ${res.prediction ? 'Risk detected' : 'No risk detected'} (${(res.probability * 100).toFixed(1)}% prob).`);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unable to run prediction.';
+      setMessage(msg);
+      toastError(msg);
+    }
     finally { setSaving(false); }
   }
 

@@ -1,22 +1,32 @@
 .contentGrid {
   display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 2rem;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 1.75rem;
   height: 100%;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .leftColumn {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.75rem;
   overflow-y: auto;
   padding-right: 0.5rem;
+  min-width: 0;
+}
+
+.rightColumn {
+  min-width: 0;
+  width: 100%;
+  overflow-y: auto;
+  padding-right: 0.25rem;
 }
 
 .bottomGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1.5rem;
-  min-height: 200px;
-  margin-bottom: 2rem;
+  min-height: 250px;
+  margin-bottom: 1.5rem;
 }

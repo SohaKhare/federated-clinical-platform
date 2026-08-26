@@ -3,11 +3,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
+import { useToast } from '@/lib/ToastContext';
 import styles from '../login/login.module.css';
 import onboardingStyles from './onboarding.module.css';
 
 export default function Onboarding() {
   const { user } = useAuth();
+  const { success } = useToast();
   const router = useRouter();
   const [hospitalName, setHospitalName] = useState('');
   const [pincode, setPincode] = useState('');
@@ -39,6 +41,7 @@ export default function Onboarding() {
         pincode: pincode.trim(),
         geolocation: { latitude: lat, longitude: lng },
       });
+      success('Hospital profile set up successfully! Welcome to the federation.');
       router.replace('/');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Onboarding failed. Please try again.');

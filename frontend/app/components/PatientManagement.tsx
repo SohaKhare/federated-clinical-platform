@@ -1,53 +1,61 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import styles from './PatientManagement.module.css';
 import formStyles from './PatientFormModal.module.css';
-import { Camera, Plus, ChevronRight, X } from 'lucide-react';
-import { api, ApiError, type Patient } from '@/lib/api';
+import { Plus, ChevronRight, X, User } from 'lucide-react';
+import { api, ApiError, type Patient, type NewPatientInput } from '@/lib/api';
+import { useToast } from '@/lib/ToastContext';
 
-export default function PatientManagement() {
+interface PatientManagementProps {
+  showModalExternal?: boolean;
+  onCloseModal?: () => void;
+  onPatientAdded?: () => void;
+}
+
+export default function PatientManagement({
+  showModalExternal,
+  onCloseModal,
+  onPatientAdded,
+}: PatientManagementProps) {
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [showForm, setShowForm] = useState(false);
+  const [showInternalForm, setShowInternalForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const { success } = useToast();
 
-  const loadPatients = () => {
+  const isModalOpen = showModalExternal !== undefined ? showModalExternal : showInternalForm;
+  const handleCloseModal = onCloseModal || (() => setShowInternalForm(false));
+
+  const loadPatients = useCallback(() => {
     api.getPatients()
       .then(setPatients)
       .catch(() => {});
-  };
+  }, []);
 
   useEffect(() => {
     loadPatients();
-  }, []);
+  }, [loadPatients]);
 
   const recent = patients.slice(0, 4);
 
   return (
     <div className={styles.container}>
-
-      {/* Edit Patient Card */}
-      <div className={styles.addPatientCard} onClick={() => setShowForm(true)} style={{ cursor: 'pointer' }}>
-        <div className={styles.cameraIcon}>
-          <Camera size={16} color="#666" />
-        </div>
-
-        <div className={styles.faceWireframe}>
-          <div className={styles.headOutline}></div>
-          <div className={styles.crosshair}></div>
-        </div>
-
-        <div className={styles.addContent}>
-          <h4 className={styles.addTitle}>Edit patients</h4>
-          <span className={styles.addSubtitle}>Manage and update local records</span>
-        </div>
-      </div>
-
-
       {/* Patient List */}
       <div className={styles.listSection}>
-        <h4 className={styles.listTitle}>Patients <span>{patients.length} registered</span></h4>
+        <div className={styles.sectionHeader}>
+          <h4 className={styles.listTitle}>
+            Patients <span>{patients.length} registered</span>
+          </h4>
+          <button
+            type="button"
+            className={styles.quickAddBtn}
+            onClick={() => setShowInternalForm(true)}
+            title="Add Patient"
+          >
+            <Plus size={14} />
+          </button>
+        </div>
 
         <div className={styles.listItems}>
           {recent.length === 0 && (
@@ -58,11 +66,15 @@ export default function PatientManagement() {
           {recent.map((p) => (
             <Link key={p.patient_id} href={`/patients/${p.patient_id}`} style={{ textDecoration: 'none' }}>
               <div className={styles.listItem}>
-                <span className={styles.itemName}>{p.name}</span>
+                <div className={styles.itemMain}>
+                  <div className={styles.avatarMini}>
+                    <User size={12} />
+                  </div>
+                  <span className={styles.itemName}>{p.name}</span>
+                </div>
                 <div className={styles.itemControls}>
                   <div className={styles.dotsGroup}>
                     <span className={(p.diagnosed_diseases?.length ?? 0) > 0 ? styles.dotGreen : styles.dotLight}></span>
-                    <span className={styles.dotLight}></span>
                     <span className={styles.dotLight}></span>
                   </div>
                   <ChevronRight size={14} color="#666" />
@@ -73,45 +85,54 @@ export default function PatientManagement() {
         </div>
 
         <div className={styles.listFooter}>
-          <Link href="/patients" className={styles.viewAllBtn}>view all <ChevronRight size={12} /></Link>
-          <div className={styles.addBtn} onClick={() => setShowForm(true)}>edit <Plus size={12} /></div>
+          <Link href="/patients" className={styles.viewAllBtn}>
+            View catalogue <ChevronRight size={12} />
+          </Link>
+          <button
+            type="button"
+            className={styles.addBtn}
+            onClick={() => setShowInternalForm(true)}
+          >
+            Add <Plus size={12} />
+          </button>
         </div>
       </div>
 
-      {/* Expand card (static) */}
+      {/* Node Status / Summary Card */}
       <div className={styles.expandCard}>
         <div className={styles.expandHeader}>
           <div className={styles.progressValue}>{patients.length}</div>
-          <span className={styles.progressSub}>local patients</span>
+          <span className={styles.progressSub}>local patients enrolled</span>
         </div>
         <div className={styles.progressBar}>
-          <div className={styles.progressFill}></div>
-          <div className={styles.progressDot}></div>
+          <div className={styles.progressFill} style={{ width: `${Math.min(100, patients.length * 20)}%` }}></div>
+          <div className={styles.progressDot} style={{ left: `${Math.min(95, patients.length * 20)}%` }}></div>
           <div className={styles.progressTrackDots}></div>
         </div>
         <div className={styles.expandContent}>
-          <h5 className={styles.expandTitle}>Manage your node</h5>
-          <p className={styles.expandDesc}>Edit and update patient records for federated rounds</p>
-          <Link href="/patients" className={styles.viewAllBtn}>All patients <ChevronRight size={12} /></Link>
-        </div>
-        <div className={styles.plusIconLarge} onClick={() => setShowForm(true)}>
-          <Plus size={16} color="#fff" />
+          <h5 className={styles.expandTitle}>Local Hospital Node</h5>
+          <p className={styles.expandDesc}>Records ready for differential privacy training rounds</p>
+          <Link href="/patients" className={styles.viewAllBtn}>
+            All records <ChevronRight size={12} />
+          </Link>
         </div>
       </div>
 
       {/* Add Patient Modal */}
-      {showForm && (
+      {isModalOpen && (
         <AddPatientModal
           submitting={submitting}
           error={formError}
-          onClose={() => setShowForm(false)}
+          onClose={handleCloseModal}
           onSubmit={async (input) => {
             setSubmitting(true);
             setFormError('');
             try {
               await api.createPatient(input);
-              setShowForm(false);
+              success(`Patient "${input.name}" successfully added to local node!`);
+              handleCloseModal();
               loadPatients();
+              onPatientAdded?.();
             } catch (err) {
               setFormError(err instanceof ApiError ? err.message : 'Failed to create patient.');
             } finally {
@@ -124,7 +145,7 @@ export default function PatientManagement() {
   );
 }
 
-interface AddPatientInput {
+export interface AddPatientInput {
   name: string;
   age: number;
   sex: string;
@@ -133,7 +154,7 @@ interface AddPatientInput {
   health_conditions: Record<string, unknown>;
 }
 
-function AddPatientModal({
+export function AddPatientModal({
   onSubmit,
   onClose,
   submitting,
@@ -179,58 +200,100 @@ function AddPatientModal({
     <div className={formStyles.overlay} onClick={onClose}>
       <div className={formStyles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={formStyles.header}>
-          <h3>Edit Patient</h3>
-          <button type="button" className={formStyles.closeBtn} onClick={onClose}><X size={16} /></button>
+          <h3>Add Patient</h3>
+          <button type="button" className={formStyles.closeBtn} onClick={onClose} aria-label="Close dialog">
+            <X size={16} />
+          </button>
         </div>
 
         <form className={formStyles.form} onSubmit={handleSubmit}>
           <div className={formStyles.row}>
             <label className={formStyles.field}>
               <span>Name *</span>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Rekha Sharma" />
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Rekha Sharma"
+                required
+                autoFocus
+              />
             </label>
             <label className={formStyles.field}>
               <span>Age *</span>
-              <input type="number" min="0" max="120" value={age} onChange={(e) => setAge(e.target.value)} placeholder="34" />
+              <input
+                type="number"
+                min="0"
+                max="120"
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                placeholder="34"
+                required
+              />
             </label>
             <label className={formStyles.field}>
               <span>Sex *</span>
               <select value={sex} onChange={(e) => setSex(e.target.value)}>
-                <option value="F">F</option>
-                <option value="M">M</option>
+                <option value="F">Female (F)</option>
+                <option value="M">Male (M)</option>
               </select>
             </label>
           </div>
 
           <label className={formStyles.field}>
             <span>Symptoms (comma separated)</span>
-            <input type="text" value={symptoms} onChange={(e) => setSymptoms(e.target.value)} placeholder="fever, cough, fatigue" />
+            <input
+              type="text"
+              value={symptoms}
+              onChange={(e) => setSymptoms(e.target.value)}
+              placeholder="chest pain, shortness of breath, fatigue"
+            />
           </label>
 
           <label className={formStyles.field}>
             <span>Diagnosed diseases (comma separated)</span>
-            <input type="text" value={diseases} onChange={(e) => setDiseases(e.target.value)} placeholder="ICD10_J45" />
+            <input
+              type="text"
+              value={diseases}
+              onChange={(e) => setDiseases(e.target.value)}
+              placeholder="ICD10_I20, ICD10_J45"
+            />
           </label>
 
           <div className={formStyles.row}>
             <label className={formStyles.field}>
               <span>Blood pressure</span>
-              <input type="text" value={bp} onChange={(e) => setBp(e.target.value)} placeholder="130/85" />
+              <input
+                type="text"
+                value={bp}
+                onChange={(e) => setBp(e.target.value)}
+                placeholder="130/85"
+              />
             </label>
             <label className={formStyles.field}>
-              <span>Sugar</span>
-              <input type="text" value={sugar} onChange={(e) => setSugar(e.target.value)} placeholder="110mg/dL" />
+              <span>Blood Sugar</span>
+              <input
+                type="text"
+                value={sugar}
+                onChange={(e) => setSugar(e.target.value)}
+                placeholder="110 mg/dL"
+              />
             </label>
             <label className={formStyles.field}>
-              <span>Allergies (comma separated)</span>
-              <input type="text" value={allergies} onChange={(e) => setAllergies(e.target.value)} placeholder="penicillin" />
+              <span>Allergies</span>
+              <input
+                type="text"
+                value={allergies}
+                onChange={(e) => setAllergies(e.target.value)}
+                placeholder="penicillin, pollen"
+              />
             </label>
           </div>
 
           {error && <p className={formStyles.error}>{error}</p>}
 
           <button type="submit" className={formStyles.submitBtn} disabled={submitting}>
-            {submitting ? 'Saving…' : 'Create patient'}
+            {submitting ? 'Saving Patient…' : 'Add Patient'}
           </button>
         </form>
       </div>

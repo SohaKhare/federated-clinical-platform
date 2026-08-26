@@ -1,38 +1,38 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import styles from './PatientManagement.module.css';
 import { Server, Play, ChevronRight, CheckCircle2, RefreshCw } from 'lucide-react';
 import { api, type FederatedNode, type FederatedRoundSnapshot } from '@/lib/api';
+import { useToast } from '@/lib/ToastContext';
 
 export default function NodeManagement() {
   const [nodes, setNodes] = useState<FederatedNode[]>([]);
   const [rounds, setRounds] = useState<FederatedRoundSnapshot[]>([]);
   const [working, setWorking] = useState(false);
-  const [actionMessage, setActionMessage] = useState('');
+  const { success, error } = useToast();
 
-  const loadData = () => {
+  const loadData = useCallback(() => {
     api.getNodes().then(setNodes).catch(() => {});
     api.getFederatedRounds().then(setRounds).catch(() => {});
-  };
+  }, []);
 
   useEffect(() => {
     loadData();
     const interval = setInterval(loadData, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadData]);
 
   const latestRound = rounds.length > 0 ? rounds[0] : null;
 
   const handleStartRound = async () => {
     setWorking(true);
-    setActionMessage('');
     try {
       await api.startGlobalRound();
-      setActionMessage('New federated round initiated across active nodes.');
+      success('New federated round successfully initiated across active nodes!');
       loadData();
     } catch (err) {
-      setActionMessage(err instanceof Error ? err.message : 'Unable to start round.');
+      error(err instanceof Error ? err.message : 'Unable to start round.');
     } finally {
       setWorking(false);
     }
@@ -40,13 +40,12 @@ export default function NodeManagement() {
 
   const handleBroadcast = async (roundId: string) => {
     setWorking(true);
-    setActionMessage('');
     try {
       await api.broadcastGlobalWeights(roundId);
-      setActionMessage('Global weights broadcasted to hospital nodes.');
+      success('Global aggregated weights successfully broadcasted to nodes!');
       loadData();
     } catch (err) {
-      setActionMessage(err instanceof Error ? err.message : 'Broadcast failed.');
+      error(err instanceof Error ? err.message : 'Broadcast failed.');
     } finally {
       setWorking(false);
     }
@@ -56,73 +55,66 @@ export default function NodeManagement() {
 
   return (
     <div className={styles.container}>
-      {/* Federation Control Action Card */}
-      <div className={styles.addPatientCard} style={{ cursor: 'default' }}>
-        <div className={styles.cameraIcon}>
+      {/* Federation Quick Actions Card */}
+      <div className={styles.listSection}>
+        <div className={styles.sectionHeader}>
+          <h4 className={styles.listTitle}>
+            Federation Control
+          </h4>
           <Server size={16} color="#666" />
         </div>
+        <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
+          {latestRound ? `Round ${latestRound.round} · Status: ${latestRound.status}` : 'Coordinate distributed training'}
+        </p>
 
-        <div className={styles.faceWireframe}>
-          <div className={styles.headOutline} style={{ borderRadius: '16px' }}></div>
-          <div className={styles.crosshair}></div>
-        </div>
-
-        <div className={styles.addContent}>
-          <h4 className={styles.addTitle}>Federation Control</h4>
-          <span className={styles.addSubtitle}>
-            {latestRound ? `Round ${latestRound.round} · ${latestRound.status}` : 'Coordinate distributed training'}
-          </span>
-          <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <button
+            type="button"
+            className={styles.addBtn}
+            onClick={handleStartRound}
+            disabled={working}
+            style={{
+              backgroundColor: 'var(--color-text-main)',
+              color: '#fff',
+              border: 'none',
+              padding: '0.6rem',
+              justifyContent: 'center',
+              borderRadius: '12px'
+            }}
+          >
+            <Play size={13} /> {working ? 'Initiating…' : 'Start Federated Round'}
+          </button>
+          {latestRound && latestRound.ready_nodes > 0 && latestRound.status !== 'completed' && (
             <button
               type="button"
               className={styles.addBtn}
-              onClick={handleStartRound}
+              onClick={() => handleBroadcast(latestRound.round_id)}
               disabled={working}
-              style={{ backgroundColor: 'var(--color-text-main)', color: '#fff', border: 'none' }}
+              style={{
+                backgroundColor: '#10b981',
+                color: '#fff',
+                border: 'none',
+                padding: '0.6rem',
+                justifyContent: 'center',
+                borderRadius: '12px'
+              }}
             >
-              <Play size={12} /> {working ? 'Running…' : 'Start round'}
+              <CheckCircle2 size={13} /> Broadcast Weights
             </button>
-            {latestRound && latestRound.ready_nodes > 0 && latestRound.status !== 'completed' && (
-              <button
-                type="button"
-                className={styles.addBtn}
-                onClick={() => handleBroadcast(latestRound.round_id)}
-                disabled={working}
-              >
-                <CheckCircle2 size={12} /> Broadcast
-              </button>
-            )}
-          </div>
-          {actionMessage && (
-            <p style={{ fontSize: '0.7rem', color: '#2b5c56', marginTop: '0.5rem' }}>{actionMessage}</p>
           )}
-        </div>
-      </div>
-
-      {/* Mini Node Avatars */}
-      <div className={styles.miniAvatars}>
-        <div className={styles.avatarsRow}>
-          {recentNodes.slice(0, 3).map((n, i) => (
-            <div
-              key={n.node_id}
-              className={styles.avatar}
-              style={{ backgroundColor: ['#2b5c56', '#7e57c2', '#ec407a'][i % 3] }}
-              title={n.hospital_name}
-            ></div>
-          ))}
-          {recentNodes.length === 0 && <div className={styles.avatarDots}>…</div>}
-        </div>
-        <div className={styles.avatarsInfo}>
-          <span className={styles.avatarsText}>
-            {nodes.length} hospital node{nodes.length === 1 ? '' : 's'} registered
-          </span>
-          <Link href="/nodes" className={styles.viewAllBtn}>view all <ChevronRight size={12} /></Link>
         </div>
       </div>
 
       {/* Hospital Nodes List */}
       <div className={styles.listSection}>
-        <h4 className={styles.listTitle}>Hospitals <span>{nodes.length} connected</span></h4>
+        <div className={styles.sectionHeader}>
+          <h4 className={styles.listTitle}>
+            Hospitals <span>{nodes.length} connected</span>
+          </h4>
+          <button type="button" className={styles.quickAddBtn} onClick={loadData} title="Refresh nodes">
+            <RefreshCw size={13} />
+          </button>
+        </div>
 
         <div className={styles.listItems}>
           {recentNodes.length === 0 && (
@@ -133,7 +125,12 @@ export default function NodeManagement() {
           {recentNodes.map((n) => (
             <Link key={n.node_id} href={`/nodes#${n.node_id}`} style={{ textDecoration: 'none' }}>
               <div className={styles.listItem}>
-                <span className={styles.itemName}>{n.hospital_name || 'Hospital Node'}</span>
+                <div className={styles.itemMain}>
+                  <div className={styles.avatarMini}>
+                    <Server size={11} />
+                  </div>
+                  <span className={styles.itemName}>{n.hospital_name || 'Hospital Node'}</span>
+                </div>
                 <div className={styles.itemControls}>
                   <div className={styles.dotsGroup}>
                     <span className={n.status === 'active' ? styles.dotGreen : styles.dotLight}></span>
@@ -146,10 +143,12 @@ export default function NodeManagement() {
         </div>
 
         <div className={styles.listFooter}>
-          <Link href="/nodes" className={styles.viewAllBtn}>view all <ChevronRight size={12} /></Link>
-          <div className={styles.addBtn} onClick={loadData}>
-            refresh <RefreshCw size={12} />
-          </div>
+          <Link href="/nodes" className={styles.viewAllBtn}>
+            View all nodes <ChevronRight size={12} />
+          </Link>
+          <button type="button" className={styles.addBtn} onClick={loadData}>
+            Refresh <RefreshCw size={12} />
+          </button>
         </div>
       </div>
 
@@ -166,8 +165,10 @@ export default function NodeManagement() {
         </div>
         <div className={styles.expandContent}>
           <h5 className={styles.expandTitle}>Global Node Network</h5>
-          <p className={styles.expandDesc}>Coordinating Flower FedAvg rounds across local nodes</p>
-          <Link href="/nodes" className={styles.viewAllBtn}>All hospital nodes <ChevronRight size={12} /></Link>
+          <p className={styles.expandDesc}>Coordinating FedAvg rounds across local nodes</p>
+          <Link href="/nodes" className={styles.viewAllBtn}>
+            All hospital nodes <ChevronRight size={12} />
+          </Link>
         </div>
       </div>
     </div>
