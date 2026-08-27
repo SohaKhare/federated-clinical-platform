@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import styles from '../../../components/SharedCards.module.css';
 import detailStyles from './detail.module.css';
 import { api, type Patient, type PatientEvent } from '@/lib/api';
@@ -276,6 +277,21 @@ export default function PatientDetailsPage() {
             {formatDateTime(patient.created_at)}
           </p>
         </div>
+        <Link
+          href={`/patients/${id}/prediction`}
+          style={{
+            background: '#245d55',
+            color: '#fff',
+            fontWeight: 700,
+            fontSize: '0.85rem',
+            padding: '0.7rem 1.1rem',
+            borderRadius: 8,
+            textDecoration: 'none',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Risk assessment →
+        </Link>
       </div>
 
       <div className={styles.grid}>

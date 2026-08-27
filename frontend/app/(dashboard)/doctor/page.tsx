@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { api, type NewPatientInput, type Patient } from '@/lib/api';
 import PresentationBatchButton from '../../components/PresentationBatchButton';
 import { useToast } from '@/lib/ToastContext';
@@ -19,6 +20,7 @@ export default function DoctorPage() {
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const { success, error: toastError, info } = useToast();
+  const router = useRouter();
 
   const loadPatients = useCallback(async () => {
     try { setPatients(await api.getPatients()); }
@@ -65,6 +67,14 @@ export default function DoctorPage() {
   }
 
   async function runPrediction() {
+    // For a saved patient, open the full history-aware risk card (multiple
+    // conditions, bands, top factors, triage). The ad-hoc form path below
+    // stays for quick single-condition checks on an unsaved entry.
+    if (selectedId) {
+      router.push(`/patients/${selectedId}/prediction`);
+      return;
+    }
+
     setSaving(true); setMessage('Running the local PyTorch model...');
     info('Running local PyTorch model evaluation...');
     try {

@@ -290,6 +290,49 @@ export interface FederatedRoundSnapshot {
   synced_nodes: number;
 }
 
+// ---------- Per-patient prediction (the clinician's risk card) ----------
+
+export type RiskBand = 'low' | 'moderate' | 'high';
+
+export interface FeatureContribution {
+  feature: string;
+  label: string;
+  value: string;
+  contribution: number;
+  direction: 'increases' | 'lowers';
+}
+
+export interface DataCompleteness {
+  provided: number;
+  total: number;
+  defaulted: string[];
+}
+
+export interface ConditionPrediction {
+  condition: string;
+  label: string;
+  probability: number;
+  band: RiskBand;
+  triage_action: string;
+  top_features: FeatureContribution[];
+  data_completeness: DataCompleteness;
+}
+
+export interface HistoryWindow {
+  entries: number;
+  from: string | null;
+  to: string | null;
+}
+
+export interface PatientPrediction {
+  patient_id: string;
+  model_version: string | null;
+  regions_trained: number | null;
+  history_window: HistoryWindow | null;
+  generated_at: string;
+  predictions: ConditionPrediction[];
+}
+
 // ---------- API ----------
 
 export const api = {
@@ -393,6 +436,16 @@ export const api = {
     health_conditions?: HealthConditions;
   }): Promise<{ prediction: boolean; probability: number }> => {
     return fetcher('/local/patients/predict', { method: 'POST', body: JSON.stringify(input) });
+  },
+
+  /** History-aware, multi-condition risk for a saved patient — the risk card.
+   * The server assembles the patient's full clinical history itself, so no
+   * body is needed beyond the id in the path. */
+  predictPatientById: async (id: string): Promise<PatientPrediction> => {
+    return fetcher<PatientPrediction>(`/local/patients/${id}/predict`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
   },
 
   // --- LOGS (both nodes serve /logs at their own prefix — follows the

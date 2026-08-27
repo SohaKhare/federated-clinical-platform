@@ -197,6 +197,32 @@ export async function updatePatient(
   return toPatient(patient, snapshot);
 }
 
+/**
+ * A patient's clinical snapshots over time, oldest → newest — every
+ * `patient_created`/`patient_updated` event carried as a timestamped
+ * snapshot. This is the longitudinal history fed to the model for a
+ * per-patient prediction (not just the single latest snapshot).
+ */
+export async function getClinicalHistory(
+  patientId: string,
+): Promise<Array<ClinicalSnapshot & { occurred_at: string }>> {
+  const { data: events, error } = await supabase
+    .from("patient_events")
+    .select("*")
+    .eq("patient_id", patientId)
+    .in("event_type", ["patient_created", "patient_updated"])
+    .order("occurred_at", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (events ?? []).map((event) => ({
+    occurred_at: event.occurred_at,
+    ...toSnapshot(event.event_data),
+  }));
+}
+
 export async function getPatientEvents(
   patientId: string,
 ): Promise<PatientEvent[]> {

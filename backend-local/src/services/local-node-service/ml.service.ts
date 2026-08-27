@@ -2,8 +2,14 @@ import { readFile } from "node:fs/promises";
 
 import { supabase } from "../../config/supabase.js";
 import { env } from "../../config/env.js";
+import { classifyRisk } from "../../config/risk-bands.js";
 import { getLastCompletedRoundTimestamp } from "./log.service.js";
 import { getPatients } from "./patient.service.js";
+import type {
+  HistoryEntry,
+  PatientPrediction,
+  RawPatientPrediction,
+} from "../../interfaces/model/prediction.interface.js";
 import type { LocalTrainingStartInput } from "../../interfaces/model/federation-round.interface.js";
 import type {
   LocalModelInfo,
@@ -160,6 +166,48 @@ export async function predictLocalPatient(input: {
 
   if (!response.ok) throw new Error(`ML service returned status ${response.status}.`);
   return response.json();
+}
+
+/**
+ * History-aware, multi-condition prediction for the clinician's risk card.
+ * Sends the patient's full ordered clinical history to the ML bridge, then
+ * layers on the risk band + triage action (config, not model output) for each
+ * condition the model returned.
+ */
+export async function predictPatientConditions(input: {
+  nodeId: string;
+  patientId: string;
+  patient: { age: number; sex: string };
+  history: HistoryEntry[];
+}): Promise<PatientPrediction> {
+  const response = await fetch(`${env.federatedUrl}/federation/predict`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Federation-Key": env.federationSharedSecret,
+    },
+    body: JSON.stringify({
+      nodeId: input.nodeId,
+      patient: input.patient,
+      history: input.history,
+    }),
+  });
+
+  if (!response.ok) throw new Error(`ML service returned status ${response.status}.`);
+
+  const raw = (await response.json()) as RawPatientPrediction;
+
+  return {
+    patient_id: input.patientId,
+    model_version: raw.model_version ?? null,
+    regions_trained: raw.regions_trained ?? null,
+    history_window: raw.history_window ?? null,
+    generated_at: new Date().toISOString(),
+    predictions: (raw.predictions ?? []).map((prediction) => ({
+      ...prediction,
+      ...classifyRisk(prediction.condition, prediction.probability),
+    })),
+  };
 }
 
 /** Log statuses that mean a training run is still in flight. */

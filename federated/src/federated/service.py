@@ -12,7 +12,186 @@ import torch
 from federated.aggregation import fedavg_aggregate
 from federated.model import ClinicalModel
 from federated.run import run_federated
-from federated.task import FEATURE_COLUMNS, _features, _read_training_rows
+from federated.task import (
+    CATEGORICAL,
+    FEATURE_COLUMNS,
+    NUMERIC,
+    _features,
+    _read_training_rows,
+)
+
+
+# Metadata the current heart-disease checkpoint doesn't carry yet. A future
+# multi-disease synthetic checkpoint is expected to ship its own `conditions`
+# and `feature_schema` (see _predict); until then we synthesise this
+# single-condition manifest so the enriched prediction contract works today.
+HEART_CONDITION = {"key": "heart_disease", "label": "Heart disease"}
+HEART_FEATURE_LABELS = {
+    "age": "Age",
+    "sex": "Sex",
+    "cp": "Chest pain type",
+    "trestbps": "Resting blood pressure",
+    "chol": "Cholesterol",
+    "fbs": "Fasting blood sugar",
+    "restecg": "Resting ECG",
+    "thalach": "Max heart rate",
+    "exang": "Exercise-induced angina",
+    "oldpeak": "ST depression (oldpeak)",
+    "slope": "ST slope",
+    "ca": "Major vessels (ca)",
+    "thal": "Thalassemia (thal)",
+}
+# Clinical fallbacks used when a patient record doesn't carry a given input.
+HEART_DEFAULTS = {
+    "trestbps": 120,
+    "chol": 200,
+    "fbs": 0,
+    "restecg": "0",
+    "thalach": 150,
+    "exang": 0,
+    "oldpeak": 0,
+    "slope": "1",
+    "ca": "0",
+    "thal": "3",
+}
+
+
+def _resolve_snapshot(body: dict[str, object]) -> tuple[dict[str, object], dict | None]:
+    """Pick the clinical snapshot to score and summarise the history window.
+
+    The history-aware body sends `{patient: {age, sex}, history: [snapshot…]}`
+    ordered oldest→newest; we score the most recent snapshot and report how
+    many entries (and what date span) informed it. The legacy flat body has no
+    history, so it becomes a single-entry window.
+    """
+    history = body.get("history") if isinstance(body.get("history"), list) else None
+    patient = body.get("patient") if isinstance(body.get("patient"), dict) else {}
+
+    if history:
+        latest = history[-1] if isinstance(history[-1], dict) else {}
+        snapshot = {
+            "age": patient.get("age", latest.get("age", body.get("age", 0))),
+            "sex": patient.get("sex", latest.get("sex", body.get("sex", "M"))),
+            "symptoms": latest.get("symptoms", []),
+            "health_conditions": latest.get("health_conditions", {}),
+        }
+        stamps = sorted(
+            str(entry.get("occurred_at"))
+            for entry in history
+            if isinstance(entry, dict) and entry.get("occurred_at")
+        )
+        window = {
+            "entries": len(history),
+            "from": stamps[0] if stamps else None,
+            "to": stamps[-1] if stamps else None,
+        }
+        return snapshot, window
+
+    snapshot = {
+        "age": body.get("age", 0),
+        "sex": body.get("sex", "M"),
+        "symptoms": body.get("symptoms", []),
+        "health_conditions": body.get("health_conditions", {}),
+    }
+    return snapshot, None
+
+
+def _heart_feature_row(snapshot: dict[str, object]) -> tuple[dict[str, object], list[str]]:
+    """Cleveland heart-disease feature row from a clinical snapshot.
+
+    Returns the row plus the list of inputs that fell back to a clinical
+    default because the patient record didn't carry them — surfaced to the
+    clinician as the card's data-completeness note.
+    """
+    sex = str(snapshot.get("sex", "M")).lower()
+    sex_value = "1" if sex in ("m", "male", "1") else "0"
+    symptoms = [str(symptom).lower() for symptom in snapshot.get("symptoms") or []]
+    conditions = snapshot.get("health_conditions")
+    conditions = conditions if isinstance(conditions, dict) else {}
+
+    defaulted = [key for key in HEART_DEFAULTS if key not in conditions]
+    if not symptoms:
+        defaulted.append("cp")
+
+    row = {
+        "age": float(snapshot.get("age") or 0),
+        "sex": sex_value,
+        "cp": "4" if any("chest" in symptom for symptom in symptoms) else "1",
+        "trestbps": float(conditions.get("trestbps", 120)),
+        "chol": float(conditions.get("chol", 200)),
+        "fbs": "1" if conditions.get("fbs") in (1, "1", True) else "0",
+        "restecg": str(conditions.get("restecg", "0")),
+        "thalach": float(conditions.get("thalach", 150)),
+        "exang": "1" if conditions.get("exang") in (1, "1", True) else "0",
+        "oldpeak": float(conditions.get("oldpeak", 0)),
+        "slope": str(conditions.get("slope", "1")),
+        "ca": str(conditions.get("ca", "0")),
+        "thal": str(conditions.get("thal", "3")),
+    }
+    return row, defaulted
+
+
+def _base_feature_of(column: str) -> str:
+    """Map an encoded column back to its original clinical feature.
+
+    _features() keeps numeric columns as-is and one-hot-encodes categoricals
+    as `{feature}_{value}`, so contributions of every dummy fold back onto the
+    single feature a clinician recognises.
+    """
+    if column in NUMERIC:
+        return column
+    for categorical in CATEGORICAL:
+        if column == categorical or column.startswith(f"{categorical}_"):
+            return categorical
+    return column
+
+
+def _display_value(feature: str, row: dict[str, object]) -> str:
+    value = row.get(feature)
+    if feature == "sex":
+        return "Male" if str(value) == "1" else "Female"
+    return str(value)
+
+
+def _gradient_x_input(
+    model: ClinicalModel,
+    inputs: torch.Tensor,
+    columns: list[str],
+    row: dict[str, object],
+    top_k: int = 4,
+) -> list[dict[str, object]]:
+    """Signed per-feature attribution for the positive-class score.
+
+    gradient×input on the encoded vector, folded back onto the original
+    features, ranked by magnitude — faithful to the served model and cheap
+    (one backward pass), no SHAP dependency.
+    """
+    grad_inputs = inputs.clone().detach().requires_grad_(True)
+    model.zero_grad()
+    score = model(grad_inputs)[0, 1]
+    score.backward()
+
+    contributions = (grad_inputs[0] * grad_inputs.grad[0]).detach().tolist()
+
+    per_feature: dict[str, float] = {}
+    for column, contribution in zip(columns, contributions):
+        base = _base_feature_of(column)
+        per_feature[base] = per_feature.get(base, 0.0) + float(contribution)
+
+    ranked = sorted(per_feature.items(), key=lambda item: abs(item[1]), reverse=True)
+
+    features: list[dict[str, object]] = []
+    for feature, contribution in ranked[:top_k]:
+        if contribution == 0:
+            continue
+        features.append({
+            "feature": feature,
+            "label": HEART_FEATURE_LABELS.get(feature, feature),
+            "value": _display_value(feature, row),
+            "contribution": round(contribution, 4),
+            "direction": "increases" if contribution > 0 else "lowers",
+        })
+    return features
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -120,7 +299,20 @@ class Handler(BaseHTTPRequestHandler):
         model_path.write_bytes(raw_body)
         self._json({"status": "ok"})
 
+    # ------------------------------------------------------------------ #
+    # prediction helpers                                                   #
+    # ------------------------------------------------------------------ #
+
     def _predict(self, body: dict[str, object]) -> None:
+        """Per-patient risk for the clinician's card.
+
+        Accepts either the legacy flat body ({age, sex, symptoms,
+        health_conditions}) or the history-aware body ({patient, history[]}).
+        Returns the enriched multi-condition contract — per-condition
+        probability, gradient×input top features, and data completeness —
+        plus the top-level {prediction, probability} the older /doctor
+        workspace consumer still reads.
+        """
         node_id = body.get("nodeId")
         if not node_id:
             self.send_error(400, "nodeId is required")
@@ -131,35 +323,50 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(404, f"No trained model for node {node_id}")
             return
 
-        train = _read_training_rows()
-        _, columns, means, stds = _features(train)
-        sex = str(body.get("sex", "M")).lower()
-        sex_value = "1" if sex in ("m", "male", "1") else "0"
-        symptoms = [str(symptom).lower() for symptom in body.get("symptoms", [])]
-        conditions = body.get("health_conditions") if isinstance(body.get("health_conditions"), dict) else {}
-        row = {
-            "age": float(body.get("age", 0)),
-            "sex": sex_value,
-            "cp": "4" if any("chest" in symptom for symptom in symptoms) else "1",
-            "trestbps": float(conditions.get("trestbps", 120)),
-            "chol": float(conditions.get("chol", 200)),
-            "fbs": "1" if conditions.get("fbs") in (1, "1", True) else "0",
-            "restecg": str(conditions.get("restecg", "0")),
-            "thalach": float(conditions.get("thalach", 150)),
-            "exang": "1" if conditions.get("exang") in (1, "1", True) else "0",
-            "oldpeak": float(conditions.get("oldpeak", 0)),
-            "slope": str(conditions.get("slope", "1")),
-            "ca": str(conditions.get("ca", "0")),
-            "thal": str(conditions.get("thal", "3")),
-        }
-        features, _, _, _ = _features(pd.DataFrame([row], columns=FEATURE_COLUMNS), columns, means, stds)
+        snapshot, history_window = _resolve_snapshot(body)
+        row, defaulted = _heart_feature_row(snapshot)
+
         checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
         model = ClinicalModel(checkpoint["input_size"])
         model.load_state_dict(checkpoint["state_dict"])
         model.eval()
+
+        _, columns, means, stds = _features(_read_training_rows())
+        features, _, _, _ = _features(
+            pd.DataFrame([row], columns=FEATURE_COLUMNS), columns, means, stds
+        )
+        inputs = torch.tensor(features.to_numpy(), dtype=torch.float32)
+
         with torch.no_grad():
-            probability = torch.softmax(model(torch.tensor(features.to_numpy(), dtype=torch.float32)), dim=1)[0, 1].item()
-        self._json({"prediction": probability >= 0.5, "probability": round(probability, 4)})
+            probability = torch.softmax(model(inputs), dim=1)[0, 1].item()
+
+        top_features = _gradient_x_input(model, inputs, columns, row)
+
+        # The live model is single-condition (heart disease). A future
+        # multi-disease checkpoint declaring `conditions`/`feature_schema`
+        # would produce one prediction per declared condition here; the
+        # backend and card already render whatever list arrives.
+        prediction = {
+            "condition": HEART_CONDITION["key"],
+            "label": HEART_CONDITION["label"],
+            "probability": round(probability, 4),
+            "top_features": top_features,
+            "data_completeness": {
+                "provided": len(FEATURE_COLUMNS) - len(defaulted),
+                "total": len(FEATURE_COLUMNS),
+                "defaulted": defaulted,
+            },
+        }
+
+        self._json({
+            "model_version": checkpoint.get("model_version") or "local",
+            "regions_trained": checkpoint.get("regions_trained"),
+            "history_window": history_window,
+            "predictions": [prediction],
+            # Backward-compat for the thin POST /local/patients/predict consumer.
+            "prediction": probability >= 0.5,
+            "probability": round(probability, 4),
+        })
 
     def _json(self, payload: dict[str, object]) -> None:
         self.send_response(200)
