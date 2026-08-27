@@ -6,6 +6,7 @@ import {
   startFederatedRoundController,
   getFederatedRoundController,
   getFederatedRoundsController,
+  getModelPerformanceController,
 } from "../controllers/global-node/federation.controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.middleware.js";
 import { requireFederationKey } from "../middleware/federation.middleware.js";
@@ -31,6 +32,13 @@ router.get(
   requireAuth,
   requireRole("global"),
   getFederatedRoundController,
+);
+
+router.get(
+  "/performance",
+  requireAuth,
+  requireRole("global"),
+  getModelPerformanceController,
 );
 
 router.post(

@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { env } from "../../config/env.js";
 import { supabase } from "../../config/supabase.js";
+import { evaluateGlobalModel } from "./evaluation.service.js";
 import type {
   FederatedNodePhase,
   FederatedRoundBroadcastInput,
@@ -421,6 +422,18 @@ export async function broadcastFederatedWeights(
   record.status = broadcastedNodes.length === targetNodeIds.length ? "completed" : "partial";
   record.updatedAt = now;
   await persistRound(record);
+
+  const evaluationNodeId = broadcastedNodes[0];
+
+  if (record.status === "completed" && evaluationNodeId) {
+    // Every target node's local model file now holds the same aggregated
+    // weights, so any one of them can serve as the evaluation model. Runs
+    // after the response-shaping snapshot below is built, and failures here
+    // must not fail the broadcast itself — the round already succeeded.
+    evaluateGlobalModel(record.roundId, record.round, evaluationNodeId).catch((evaluationError) => {
+      console.error(`Model evaluation failed for round ${record.roundId}:`, evaluationError);
+    });
+  }
 
   return {
     message: "Global weights broadcast completed.",

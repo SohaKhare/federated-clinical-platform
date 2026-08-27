@@ -290,6 +290,15 @@ export interface FederatedRoundSnapshot {
   synced_nodes: number;
 }
 
+export interface ModelPerformanceSnapshot {
+  round_id: string;
+  round: number;
+  accuracy: number;
+  loss: number;
+  sample_count: number;
+  evaluated_at: string;
+}
+
 // ---------- API ----------
 
 export const api = {
@@ -484,5 +493,10 @@ export const api = {
 
   getFederatedRound: async (roundId: string): Promise<FederatedRoundSnapshot> => {
     return fetcher<FederatedRoundSnapshot>(`/global/api/federated/rounds/${roundId}`);
+  },
+
+  getModelPerformance: async (): Promise<ModelPerformanceSnapshot[]> => {
+    const data = await fetcher<{ performance: ModelPerformanceSnapshot[] }>('/global/api/federated/performance');
+    return data.performance;
   },
 };

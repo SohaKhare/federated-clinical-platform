@@ -68,3 +68,12 @@ export interface FederatedRoundBroadcastInput {
 export interface LocalTrainingStartInput {
   config?: Record<string, unknown>;
 }
+
+export interface ModelPerformanceSnapshot {
+  round_id: string;
+  round: number;
+  accuracy: number;
+  loss: number;
+  sample_count: number;
+  evaluated_at: string;
+}

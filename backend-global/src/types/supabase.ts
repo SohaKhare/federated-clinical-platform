@@ -66,6 +66,29 @@ export interface Database {
           updated_at: string;
         };
       };
+      test_patients: {
+        Row: {
+          test_patient_id: string;
+          name: string | null;
+          age: number;
+          sex: string;
+          symptoms: string[];
+          health_conditions: unknown;
+          actual_diagnosis: boolean;
+          created_at: string;
+        };
+      };
+      model_performance: {
+        Row: {
+          performance_id: string;
+          round_id: string;
+          round: number;
+          accuracy: number;
+          loss: number;
+          sample_count: number;
+          evaluated_at: string;
+        };
+      };
     };
   };
 }

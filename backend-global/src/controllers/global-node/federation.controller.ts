@@ -7,6 +7,7 @@ import {
   getFederatedRoundSnapshot,
   getFederatedRoundSnapshots,
 } from "../../services/global-node-service/federation.service.js";
+import { getModelPerformanceHistory } from "../../services/global-node-service/evaluation.service.js";
 import type {
   FederatedRoundBroadcastInput,
   FederatedRoundCallbackInput,
@@ -111,6 +112,21 @@ export async function getFederatedRoundsController(
     console.error("Federated rounds fetch error:", error);
 
     return res.status(500).json({ message: "Unable to fetch federated rounds." });
+  }
+}
+
+export async function getModelPerformanceController(
+  _req: Request,
+  res: Response,
+) {
+  try {
+    const performance = await getModelPerformanceHistory();
+
+    return res.json({ performance });
+  } catch (error) {
+    console.error("Model performance fetch error:", error);
+
+    return res.status(500).json({ message: "Unable to fetch model performance." });
   }
 }
 
