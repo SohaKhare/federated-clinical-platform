@@ -1,18 +1,36 @@
 .wrap {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 12px;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  width: auto;
 }
 
 .button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
   border: 0;
-  border-radius: 8px;
-  padding: 10px 14px;
+  border-radius: 12px;
+  padding: 11px 18px;
   background: #245d55;
-  color: white;
+  color: #ffffff;
   cursor: pointer;
   font-weight: 600;
+  font-size: 0.88rem;
+  box-shadow: 0 2px 10px rgba(36, 93, 85, 0.2);
+  transition: opacity 0.15s ease, transform 0.15s ease, background-color 0.15s ease;
+  white-space: nowrap;
+  width: auto;
+}
+
+.button:hover:not(:disabled) {
+  background: #1b4741;
+  transform: translateY(-1px);
+}
+
+.button:active {
+  transform: translateY(0);
 }
 
 .button:disabled {
@@ -23,10 +41,24 @@
 .status {
   color: #55706b;
   font-size: 13px;
+  text-align: center;
 }
 
 .count {
   color: #245d55;
   font-size: 13px;
   font-weight: 600;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .wrap {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .button {
+    width: 100%;
+    display: flex;
+  }
 }

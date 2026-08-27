@@ -1,0 +1,30 @@
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.9rem;
+  background-color: #ffffff;
+  color: var(--color-text-main, #111111);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  margin-bottom: 0.85rem;
+  width: fit-content;
+}
+
+.backBtn:hover {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+  transform: translateX(-2px);
+}
+
+@media (min-width: 901px) {
+  .mobileOnly {
+    display: none;
+  }
+}

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps';
 import styles from './heatmap.module.css';
+import MobileBackButton from '../../components/MobileBackButton';
 
 const INDIA_TOPO_JSON = "/india-states.json";
 
@@ -74,6 +75,7 @@ export default function HeatmapPage() {
 
   return (
     <div className={styles.container}>
+      <MobileBackButton />
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Data Density Heatmap</h1>

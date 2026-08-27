@@ -32,7 +32,53 @@
 .contentWrapper {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
+}
+
+@media (max-width: 900px) {
+  .appLayout {
+    display: block !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    width: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  .sidebarWrapper {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  .headerWrapper {
+    display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .mainWrapper {
+    display: block !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow: visible !important;
+    width: 100% !important;
+  }
+
+  .contentWrapper {
+    display: block !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
 }

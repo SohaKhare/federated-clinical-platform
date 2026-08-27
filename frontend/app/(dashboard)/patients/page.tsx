@@ -5,6 +5,7 @@ import styles from './patients.module.css';
 import { api, type Patient } from '@/lib/api';
 import { Search } from 'lucide-react';
 import PresentationBatchButton from '../../components/PresentationBatchButton';
+import MobileBackButton from '../../components/MobileBackButton';
 
 export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -55,6 +56,7 @@ export default function PatientsPage() {
 
   return (
     <div className={styles.container}>
+      <MobileBackButton />
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Patients Catalogue</h1>

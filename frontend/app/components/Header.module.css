@@ -6,6 +6,12 @@
   padding-bottom: 1rem;
 }
 
+@media (max-width: 900px) {
+  .header {
+    display: none !important;
+  }
+}
+
 .searchContainer {
   display: flex;
   align-items: center;

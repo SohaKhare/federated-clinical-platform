@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { api, ApiError, type PatientPrediction, type Patient } from '@/lib/api';
 import { useToast } from '@/lib/ToastContext';
 import RiskCard from '../../../../components/RiskCard';
+import MobileBackButton from '../../../../components/MobileBackButton';
 import styles from '../../../../components/SharedCards.module.css';
 
 export default function PatientPredictionPage() {
@@ -61,6 +62,7 @@ export default function PatientPredictionPage() {
 
   return (
     <div className={styles.container}>
+      <MobileBackButton label="Back to Patients" />
       <div className={styles.header}>
         <div>
           <p className={styles.subtitle} style={{ marginBottom: '0.35rem' }}>

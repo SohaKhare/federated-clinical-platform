@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import styles from '../../../components/SharedCards.module.css';
 import detailStyles from './detail.module.css';
+import MobileBackButton from '../../../components/MobileBackButton';
 import { api, type Patient, type PatientEvent } from '@/lib/api';
 import { useToast } from '@/lib/ToastContext';
 
@@ -268,6 +269,7 @@ export default function PatientDetailsPage() {
 
   return (
     <div className={styles.container}>
+      <MobileBackButton />
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>{patient.name}</h1>

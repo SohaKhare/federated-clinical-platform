@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, type NewPatientInput, type Patient } from '@/lib/api';
 import PresentationBatchButton from '../../components/PresentationBatchButton';
+import MobileBackButton from '../../components/MobileBackButton';
 import { useToast } from '@/lib/ToastContext';
 import styles from './doctor.module.css';
 
@@ -67,9 +68,6 @@ export default function DoctorPage() {
   }
 
   async function runPrediction() {
-    // For a saved patient, open the full history-aware risk card (multiple
-    // conditions, bands, top factors, triage). The ad-hoc form path below
-    // stays for quick single-condition checks on an unsaved entry.
     if (selectedId) {
       router.push(`/patients/${selectedId}/prediction`);
       return;
@@ -98,9 +96,14 @@ export default function DoctorPage() {
 
   return (
     <main className={styles.page}>
+      <MobileBackButton />
       <header className={styles.header}>
-        <div><p className={styles.kicker}>LOCAL HOSPITAL NODE</p><h1>Doctor workspace</h1><p>Add, review, edit, and evaluate patients before the next federated round.</p></div>
-        <PresentationBatchButton onAdded={loadPatients} />
+        <div>
+          <h1 className={styles.title}>Doctor Space</h1>
+        </div>
+        <div className={styles.batchBtnWrapper}>
+          <PresentationBatchButton onAdded={loadPatients} />
+        </div>
       </header>
 
       {message && <p className={styles.message}>{message}</p>}

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import styles from './nodes.module.css';
 import { api, type FederatedNode, type NodeDetails } from '@/lib/api';
 import { Search, Server, X } from 'lucide-react';
+import MobileBackButton from '../../components/MobileBackButton';
 
 export default function NodesPage() {
   const [nodes, setNodes] = useState<FederatedNode[]>([]);
@@ -71,6 +72,7 @@ export default function NodesPage() {
 
   return (
     <div className={styles.container}>
+      <MobileBackButton />
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Hospital Nodes Directory</h1>

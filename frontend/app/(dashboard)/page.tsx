@@ -9,6 +9,7 @@ import DiseaseTrendChart from '../components/DiseaseTrendChart';
 import RecentActivityWidget from '../components/RecentActivityWidget';
 import PatientManagement from '../components/PatientManagement';
 import NodeManagement from '../components/NodeManagement';
+import LocalNodeMobileView from '../components/LocalNodeMobileView';
 import { useAuth } from '@/lib/useAuth';
 
 export default function Dashboard() {
@@ -18,37 +19,47 @@ export default function Dashboard() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   return (
-    <div className={styles.contentGrid}>
-      <div className={styles.leftColumn}>
-        {/* Top Platform / Clinical Summary with Action Buttons */}
-        <PlatformSummary onAddPatient={() => setShowAddPatientModal(true)} />
+    <>
+      {/* Mobile-Only View (Local Node Only) */}
+      {!isGlobal && (
+        <div className={styles.mobileView}>
+          <LocalNodeMobileView />
+        </div>
+      )}
 
-        {/* Summary Chart with live federation polling & hover tooltips */}
-        <SummaryChart key={`chart-${refreshKey}`} />
+      {/* Desktop View (and Global Node View) */}
+      <div className={!isGlobal ? styles.desktopView : styles.contentGrid}>
+        <div className={styles.leftColumn}>
+          {/* Top Platform / Clinical Summary with Action Buttons */}
+          <PlatformSummary onAddPatient={() => setShowAddPatientModal(true)} />
 
-        {/* Bottom widgets: Live Network (Accurate India Map), Model Performance (global node only), Recent Activity */}
-        <div className={styles.bottomGrid} style={!isGlobal ? { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } : undefined}>
-          <LiveNetworkWidget />
-          {isGlobal && <ModelPerformanceWidget />}
-          <RecentActivityWidget />
+          {/* Summary Chart with live federation polling & sub-stats */}
+          <SummaryChart key={`chart-${refreshKey}`} />
+
+          {/* Bottom widgets: Live Network, Model Performance (global node only), Recent Activity */}
+          <div className={styles.bottomGrid} style={!isGlobal ? { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } : undefined}>
+            <LiveNetworkWidget />
+            {isGlobal && <ModelPerformanceWidget />}
+            <RecentActivityWidget />
+          </div>
+        </div>
+
+        {/* Right Panel: Role-Specific Management */}
+        <div className={styles.rightColumn}>
+          {isGlobal ? (
+            <NodeManagement />
+          ) : (
+            <PatientManagement
+              showModalExternal={showAddPatientModal}
+              onCloseModal={() => setShowAddPatientModal(false)}
+              onPatientAdded={() => setRefreshKey((k) => k + 1)}
+            />
+          )}
         </div>
 
         {/* Disease trends over time (diagnosis_date aggregation) — local role only */}
         {!isGlobal && <DiseaseTrendChart />}
       </div>
-
-      {/* Right Panel: Role-Specific Management */}
-      <div className={styles.rightColumn}>
-        {isGlobal ? (
-          <NodeManagement />
-        ) : (
-          <PatientManagement
-            showModalExternal={showAddPatientModal}
-            onCloseModal={() => setShowAddPatientModal(false)}
-            onPatientAdded={() => setRefreshKey((k) => k + 1)}
-          />
-        )}
-      </div>
-    </div>
+    </>
   );
 }

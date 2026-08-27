@@ -5,6 +5,7 @@ import { Download, ChevronDown, ChevronUp, RefreshCw, Filter } from 'lucide-reac
 import { api, type LogEntry, type FederatedNode } from '@/lib/api';
 import { parseUtcIso } from '@/lib/time';
 import { useAuth } from '@/lib/useAuth';
+import MobileBackButton from '../../components/MobileBackButton';
 
 export default function LogsPage() {
   const { user } = useAuth();
@@ -110,6 +111,7 @@ export default function LogsPage() {
 
   return (
     <div className={styles.container}>
+      <MobileBackButton />
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>{isGlobal ? 'Global Exchange Logs' : 'Data Exchange Logs'}</h1>

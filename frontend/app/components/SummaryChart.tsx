@@ -63,30 +63,36 @@ export default function SummaryChart() {
     return () => clearInterval(interval);
   }, [loadData]);
 
-  // Build bar chart data sorted by round (up to 5 most relevant rounds)
+  const totalRegisteredNodes = nodes.length > 0 ? nodes.length : 8;
+
+  // Build bar chart data sorted by round using backend values
   const chartData: BarDataPoint[] = isGlobal
     ? rounds.length > 0
       ? [...rounds]
           .sort((a, b) => a.round - b.round)
           .slice(-5)
           .map((r, i) => {
-            const targetCount = r.target_node_ids?.length || nodes.length || 8;
-            const readyCount = r.ready_nodes > 0 ? r.ready_nodes : (r.status === 'completed' ? targetCount : 1);
+            const targetCount = r.target_node_ids?.length || totalRegisteredNodes;
+            const isCompleted = r.status === 'completed';
+            const syncedCount = r.synced_nodes > 0 ? r.synced_nodes : (isCompleted ? targetCount : 0);
+            const readyCount = r.ready_nodes > 0 ? r.ready_nodes : (isCompleted ? targetCount : syncedCount);
+            const barHeightVal = isCompleted ? targetCount : (readyCount > 0 ? readyCount : syncedCount > 0 ? syncedCount : 1);
+
             return {
               name: `Round ${r.round}`,
-              value: readyCount,
+              value: barHeightVal,
               round: r.round,
               status: r.status || 'active',
-              ready_nodes: r.ready_nodes,
+              ready_nodes: readyCount,
               target_nodes: targetCount,
-              synced_nodes: r.synced_nodes || 0,
+              synced_nodes: syncedCount,
               fill: ['#1a1a1a', '#333333', '#4a4a4a', '#666666', '#2b5c56'][i % 5],
             };
           })
       : [
-          { name: 'Round 1', value: 3, round: 1, status: 'completed', ready_nodes: 3, target_nodes: 3, synced_nodes: 3, fill: '#1a1a1a' },
-          { name: 'Round 2', value: 4, round: 2, status: 'completed', ready_nodes: 4, target_nodes: 4, synced_nodes: 4, fill: '#333333' },
-          { name: 'Round 3', value: 5, round: 3, status: 'active', ready_nodes: 5, target_nodes: 6, synced_nodes: 4, fill: '#2b5c56' },
+          { name: 'Round 1', value: 8, round: 1, status: 'completed', ready_nodes: 8, target_nodes: 8, synced_nodes: 8, fill: '#1a1a1a' },
+          { name: 'Round 2', value: 8, round: 2, status: 'completed', ready_nodes: 8, target_nodes: 8, synced_nodes: 8, fill: '#333333' },
+          { name: 'Round 3', value: 5, round: 3, status: 'active', ready_nodes: 5, target_nodes: 8, synced_nodes: 4, fill: '#2b5c56' },
         ]
     : summary
     ? summary.top_diagnosed_diseases.length > 0
@@ -150,7 +156,7 @@ export default function SummaryChart() {
               <div className={styles.statActions}>
                 <span className={styles.actionBtn}>
                   {isGlobal
-                    ? `Ready: ${latestGlobalRound?.ready_nodes ?? 0}/${latestGlobalRound?.target_node_ids?.length ?? (nodes.length || 8)}`
+                    ? (latestGlobalRound?.status === 'active' ? 'Round in progress' : 'Weights Aggregated')
                     : `Age range: ${summary ? `${summary.age.min}–${summary.age.max}` : '18–84'}`}
                 </span>
               </div>
@@ -178,7 +184,9 @@ export default function SummaryChart() {
                   <span className={styles.subStatRound}>{d.name}</span>
                   <span className={styles.subStatValue}>
                     {isGlobal || d.round !== undefined
-                      ? `${d.ready_nodes ?? d.value}/${d.target_nodes ?? 8} nodes`
+                      ? (d.status === 'completed'
+                          ? `${d.synced_nodes || d.target_nodes}/${d.target_nodes} synced`
+                          : `${d.ready_nodes || 0}/${d.target_nodes} ready`)
                       : `${d.count ?? d.value} pts (${d.percentage ?? 0}%)`}
                   </span>
                   {d.status && (

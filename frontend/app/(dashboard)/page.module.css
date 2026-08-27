@@ -36,3 +36,33 @@
   min-height: 0;
   height: 100%;
 }
+
+.desktopView {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  gap: 1.25rem;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mobileView {
+  display: none;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .desktopView,
+  .contentGrid,
+  .leftColumn,
+  .rightColumn {
+    display: none !important;
+  }
+
+  .mobileView {
+    display: block !important;
+    width: 100% !important;
+  }
+}

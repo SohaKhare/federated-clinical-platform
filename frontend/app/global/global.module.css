@@ -2,9 +2,9 @@
 .header { display: flex; justify-content: space-between; gap: 24px; align-items: end; margin-bottom: 24px; }
 .header h1 { margin: 4px 0 8px; font-size: 32px; }
 .header p { margin: 0; color: #6b817d; }
-.kicker { color: #2b7568 !important; font-size: 12px; letter-spacing: .12em; font-weight: 700; }
-.primary, .secondary { border: 0; border-radius: 8px; padding: 12px 16px; color: white; background: #245d55; font-weight: 700; cursor: pointer; white-space: nowrap; }
-.secondary { background: #d98e35; }
+.primary { border: 0; border-radius: 8px; padding: 12px 16px; color: white; background: #245d55; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.secondary { border: 1px solid #b8cfcd; border-radius: 8px; padding: 12px 16px; color: #2b5c56; background: #D1E4E2; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.secondary:hover:not(:disabled) { background: #2b5c56; color: #ffffff; }
 .primary:disabled, .secondary:disabled { opacity: .55; cursor: wait; }
 .message { padding: 12px 14px; border-radius: 8px; background: #edf6f3; color: #2b5c56; }
 .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
