@@ -13,16 +13,19 @@ export default function PatientsPage() {
   const [search, setSearch] = useState('');
   const [sexFilter, setSexFilter] = useState('All');
 
-  const loadPatients = useCallback(async () => {
-    try {
-      setLoading(true);
-      setPatients(await api.getPatients());
-    } catch (e) {
-      console.error('Failed to load patients', e);
-      setError(e instanceof Error ? e.message : 'Failed to load patients');
-    } finally {
-      setLoading(false);
-    }
+  // All state updates happen inside promise callbacks, so nothing mutates
+  // state synchronously during render/effect bodies
+  // (react-hooks/set-state-in-effect). Also reused as the batch-added
+  // refresh callback via PresentationBatchButton's `onAdded`.
+  const loadPatients = useCallback(() => {
+    return api
+      .getPatients()
+      .then(setPatients)
+      .catch((e) => {
+        console.error('Failed to load patients', e);
+        setError(e instanceof Error ? e.message : 'Failed to load patients');
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {

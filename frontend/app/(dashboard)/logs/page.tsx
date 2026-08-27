@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import styles from './logs.module.css';
 import { Download, ChevronDown, ChevronUp, RefreshCw, Filter } from 'lucide-react';
 import { api, type LogEntry, type FederatedNode } from '@/lib/api';
@@ -26,8 +26,16 @@ export default function LogsPage() {
     }
   }, [isGlobal]);
 
+  // Latest-request-wins guard: 5s polling plus node/filter switching can
+  // otherwise let an older response land after a newer one and clobber it.
+  const requestSeqRef = useRef(0);
+
+  // Every state update below happens inside promise callbacks, so nothing
+  // mutates state synchronously during render/effect bodies
+  // (react-hooks/set-state-in-effect). Background refreshes also keep the
+  // current rows visible instead of flashing the skeleton every 5 seconds.
   const fetchLogs = useCallback(() => {
-    setLoading(true);
+    const seq = ++requestSeqRef.current;
     const params: Record<string, string | number | undefined> = { pageSize: 100 };
     if (directionFilter !== 'All') params.direction = directionFilter;
     if (statusFilter !== 'All') params.status = statusFilter;
@@ -37,16 +45,27 @@ export default function LogsPage() {
       : api.getLogs(params);
 
     req
-      .then((data) => setLogs(data.logs))
+      .then((data) => {
+        if (seq === requestSeqRef.current) setLogs(data.logs);
+      })
       .catch((err) => console.error('Failed to load logs', err))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (seq === requestSeqRef.current) setLoading(false);
+      });
   }, [isGlobal, selectedNode, directionFilter, statusFilter]);
 
   useEffect(() => {
+    // `loading` initializes as true, so the very first load already renders
+    // the skeleton — no synchronous setState needed at effect start.
     fetchLogs();
     const interval = setInterval(fetchLogs, 5000);
     return () => clearInterval(interval);
   }, [fetchLogs]);
+
+  const handleRefresh = () => {
+    setLoading(true); // event handler — synchronous updates are fine here
+    fetchLogs();
+  };
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
@@ -99,7 +118,7 @@ export default function LogsPage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <button className={styles.exportBtn} onClick={fetchLogs} style={{ backgroundColor: '#2a2a2a' }}>
+          <button className={styles.exportBtn} onClick={handleRefresh} style={{ backgroundColor: '#2a2a2a' }}>
             <RefreshCw size={16} /> Refresh
           </button>
           <button className={styles.exportBtn} onClick={exportJson} disabled={logs.length === 0}>

@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import styles from './nodes.module.css';
 import { api, type FederatedNode, type NodeDetails } from '@/lib/api';
-import { Search, Server, Activity, X } from 'lucide-react';
+import { Search, Server, X } from 'lucide-react';
 
 export default function NodesPage() {
   const [nodes, setNodes] = useState<FederatedNode[]>([]);
@@ -14,17 +14,18 @@ export default function NodesPage() {
   const [nodeDetail, setNodeDetail] = useState<NodeDetails | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
-  const loadNodes = async () => {
-    try {
-      setLoading(true);
-      const data = await api.getNodes();
-      setNodes(data);
-    } catch (e) {
-      console.error('Failed to load nodes', e);
-      setError(e instanceof Error ? e.message : 'Failed to load nodes');
-    } finally {
-      setLoading(false);
-    }
+  // All state updates happen inside promise callbacks, so nothing mutates
+  // state synchronously during render/effect bodies
+  // (react-hooks/set-state-in-effect). `loading` initializes to true.
+  const loadNodes = () => {
+    return api
+      .getNodes()
+      .then((data) => setNodes(data))
+      .catch((e) => {
+        console.error('Failed to load nodes', e);
+        setError(e instanceof Error ? e.message : 'Failed to load nodes');
+      })
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
