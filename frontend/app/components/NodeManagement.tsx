@@ -119,9 +119,6 @@ export default function NodeManagement() {
           <h4 className={styles.listTitle}>
             Hospitals <span>{nodes.length} connected</span>
           </h4>
-          <button type="button" className={styles.quickAddBtn} onClick={loadData} title="Refresh nodes">
-            <RefreshCw size={12} />
-          </button>
         </div>
 
         <div className={styles.listItems}>
@@ -151,12 +148,9 @@ export default function NodeManagement() {
         </div>
 
         <div className={styles.listFooter}>
-          <Link href="/nodes" className={styles.viewAllBtn}>
+          <Link href="/nodes" className={styles.viewAllBtn} style={{ width: '100%', justifyContent: 'center' }}>
             View all directory <ChevronRight size={11} />
           </Link>
-          <button type="button" className={styles.addBtn} onClick={loadData}>
-            Sync <RefreshCw size={10} />
-          </button>
         </div>
       </div>
 

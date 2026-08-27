@@ -23,16 +23,10 @@ export default function PlatformSummary({ onAddPatient }: PlatformSummaryProps) 
 
       <div className={styles.actionButtons}>
         {isGlobal ? (
-          <>
-            <Link href="/nodes" className={styles.primaryBtn} id="btn-view-nodes">
-              <Server size={16} />
-              <span>Hospital Nodes</span>
-            </Link>
-            <Link href="/heatmap" className={styles.secondaryBtn} id="btn-view-heatmap">
-              <Map size={16} />
-              <span>Network Heatmap</span>
-            </Link>
-          </>
+          <Link href="/nodes" className={styles.primaryBtn} id="btn-view-nodes">
+            <Server size={16} />
+            <span>Hospital Nodes</span>
+          </Link>
         ) : (
           <>
             <button

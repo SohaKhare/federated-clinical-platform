@@ -47,14 +47,6 @@ export default function PatientManagement({
           <h4 className={styles.listTitle}>
             Patients <span>{patients.length} registered</span>
           </h4>
-          <button
-            type="button"
-            className={styles.quickAddBtn}
-            onClick={() => setShowInternalForm(true)}
-            title="Add Patient"
-          >
-            <Plus size={14} />
-          </button>
         </div>
 
         <div className={styles.listItems}>
@@ -85,16 +77,9 @@ export default function PatientManagement({
         </div>
 
         <div className={styles.listFooter}>
-          <Link href="/patients" className={styles.viewAllBtn}>
+          <Link href="/patients" className={styles.viewAllBtn} style={{ width: '100%', justifyContent: 'center' }}>
             View catalogue <ChevronRight size={12} />
           </Link>
-          <button
-            type="button"
-            className={styles.addBtn}
-            onClick={() => setShowInternalForm(true)}
-          >
-            Add <Plus size={12} />
-          </button>
         </div>
       </div>
 

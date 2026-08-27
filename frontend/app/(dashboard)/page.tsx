@@ -36,10 +36,10 @@ export default function Dashboard() {
           {/* Summary Chart with live federation polling & sub-stats */}
           <SummaryChart key={`chart-${refreshKey}`} />
 
-          {/* Bottom widgets: Live Network, Model Performance (global node only), Recent Activity */}
-          <div className={styles.bottomGrid} style={!isGlobal ? { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } : undefined}>
+          {/* Bottom widgets: Live Network, Disease Trends (local) / Model Performance (global), Recent Activity */}
+          <div className={styles.bottomGrid}>
             <LiveNetworkWidget />
-            {isGlobal && <ModelPerformanceWidget />}
+            {isGlobal ? <ModelPerformanceWidget /> : <DiseaseTrendChart />}
             <RecentActivityWidget />
           </div>
         </div>
@@ -56,9 +56,6 @@ export default function Dashboard() {
             />
           )}
         </div>
-
-        {/* Disease trends over time (diagnosis_date aggregation) — local role only */}
-        {!isGlobal && <DiseaseTrendChart />}
       </div>
     </>
   );

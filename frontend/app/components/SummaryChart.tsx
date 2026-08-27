@@ -124,14 +124,6 @@ export default function SummaryChart() {
               {isGlobal ? 'Global Rounds Overview' : 'Hospital Overview'}
             </h2>
           </div>
-          <div className={styles.headerRight}>
-            <div className={styles.legend}>
-              <span className={styles.legendDot}></span> {isGlobal ? 'Participating Nodes' : 'Top Diagnoses'}
-            </div>
-            <div className={styles.legend}>
-              <span className={styles.legendDotLight}></span> {isGlobal ? 'Offline' : 'Other'}
-            </div>
-          </div>
         </div>
 
         <div className={styles.contentArea}>
