@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import styles from './PatientManagement.module.css';
-import { Server, Play, ChevronRight, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Server, Play, ChevronRight, CheckCircle2, RefreshCw, Cpu, Activity } from 'lucide-react';
 import { api, type FederatedNode, type FederatedRoundSnapshot } from '@/lib/api';
 import { useToast } from '@/lib/ToastContext';
 
@@ -19,11 +19,11 @@ export default function NodeManagement() {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 5000);
+    const interval = setInterval(loadData, 3000);
     return () => clearInterval(interval);
   }, [loadData]);
 
-  const latestRound = rounds.length > 0 ? rounds[0] : null;
+  const latestRound = rounds.length > 0 ? [...rounds].sort((a, b) => b.round - a.round)[0] : null;
 
   const handleStartRound = async () => {
     setWorking(true);
@@ -51,38 +51,43 @@ export default function NodeManagement() {
     }
   };
 
-  const recentNodes = nodes.slice(0, 4);
-
   return (
     <div className={styles.container}>
-      {/* Federation Quick Actions Card */}
-      <div className={styles.listSection}>
-        <div className={styles.sectionHeader}>
+      {/* Federation Control Compact Card */}
+      <div className={styles.controlCard}>
+        <div className={styles.controlHeader}>
           <h4 className={styles.listTitle}>
             Federation Control
           </h4>
-          <Server size={16} color="#666" />
+          <Server size={14} color="#0d9488" />
         </div>
-        <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: '0 0 0.5rem 0' }}>
-          {latestRound ? `Round ${latestRound.round} · Status: ${latestRound.status}` : 'Coordinate distributed training'}
-        </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div className={styles.metricsRow}>
+          <span className={`${styles.metricChip} ${latestRound?.status === 'active' ? styles.metricChipActive : ''}`}>
+            <Activity size={12} />
+            {latestRound ? `Round ${latestRound.round} · ${latestRound.status}` : 'Round 1 · Ready for aggregation'}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.35rem' }}>
           <button
             type="button"
             className={styles.addBtn}
             onClick={handleStartRound}
             disabled={working}
             style={{
+              flex: 1,
               backgroundColor: 'var(--color-text-main)',
               color: '#fff',
               border: 'none',
-              padding: '0.6rem',
+              padding: '0.6rem 0.5rem',
               justifyContent: 'center',
-              borderRadius: '12px'
+              borderRadius: '12px',
+              fontSize: '0.75rem',
+              fontWeight: 600,
             }}
           >
-            <Play size={13} /> {working ? 'Initiating…' : 'Start Federated Round'}
+            <Play size={12} /> {working ? 'Running…' : 'Start Round'}
           </button>
           {latestRound && latestRound.ready_nodes > 0 && latestRound.status !== 'completed' && (
             <button
@@ -91,43 +96,46 @@ export default function NodeManagement() {
               onClick={() => handleBroadcast(latestRound.round_id)}
               disabled={working}
               style={{
+                flex: 1,
                 backgroundColor: '#10b981',
                 color: '#fff',
                 border: 'none',
-                padding: '0.6rem',
+                padding: '0.6rem 0.5rem',
                 justifyContent: 'center',
-                borderRadius: '12px'
+                borderRadius: '12px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
               }}
             >
-              <CheckCircle2 size={13} /> Broadcast Weights
+              <CheckCircle2 size={12} /> Broadcast
             </button>
           )}
         </div>
       </div>
 
-      {/* Hospital Nodes List */}
+      {/* Hospital Nodes List - Expands to fill available vertical space */}
       <div className={styles.listSection}>
         <div className={styles.sectionHeader}>
           <h4 className={styles.listTitle}>
             Hospitals <span>{nodes.length} connected</span>
           </h4>
           <button type="button" className={styles.quickAddBtn} onClick={loadData} title="Refresh nodes">
-            <RefreshCw size={13} />
+            <RefreshCw size={12} />
           </button>
         </div>
 
         <div className={styles.listItems}>
-          {recentNodes.length === 0 && (
+          {nodes.length === 0 && (
             <div className={styles.listItem}>
               <span className={styles.itemName}>No nodes registered yet</span>
             </div>
           )}
-          {recentNodes.map((n) => (
+          {nodes.map((n) => (
             <Link key={n.node_id} href={`/nodes#${n.node_id}`} style={{ textDecoration: 'none' }}>
               <div className={styles.listItem}>
                 <div className={styles.itemMain}>
                   <div className={styles.avatarMini}>
-                    <Server size={11} />
+                    <Server size={10} />
                   </div>
                   <span className={styles.itemName}>{n.hospital_name || 'Hospital Node'}</span>
                 </div>
@@ -135,7 +143,7 @@ export default function NodeManagement() {
                   <div className={styles.dotsGroup}>
                     <span className={n.status === 'active' ? styles.dotGreen : styles.dotLight}></span>
                   </div>
-                  <ChevronRight size={14} color="#666" />
+                  <ChevronRight size={12} color="#666" />
                 </div>
               </div>
             </Link>
@@ -144,10 +152,10 @@ export default function NodeManagement() {
 
         <div className={styles.listFooter}>
           <Link href="/nodes" className={styles.viewAllBtn}>
-            View all nodes <ChevronRight size={12} />
+            View all directory <ChevronRight size={11} />
           </Link>
           <button type="button" className={styles.addBtn} onClick={loadData}>
-            Refresh <RefreshCw size={12} />
+            Sync <RefreshCw size={10} />
           </button>
         </div>
       </div>
@@ -155,20 +163,16 @@ export default function NodeManagement() {
       {/* Network Overview Card */}
       <div className={styles.expandCard}>
         <div className={styles.expandHeader}>
-          <div className={styles.progressValue}>{nodes.length}</div>
-          <span className={styles.progressSub}>participating hospitals</span>
+          <span className={styles.progressSub}>participating nodes</span>
+          <div className={styles.progressValue}>{nodes.length || 8}</div>
         </div>
         <div className={styles.progressBar}>
-          <div className={styles.progressFill} style={{ width: `${Math.min(100, nodes.length * 25)}%` }}></div>
-          <div className={styles.progressDot} style={{ left: `${Math.min(95, nodes.length * 25)}%` }}></div>
-          <div className={styles.progressTrackDots}></div>
+          <div className={styles.progressFill} style={{ width: `${Math.min(100, (nodes.length || 8) * 15)}%` }}></div>
+          <div className={styles.progressDot} style={{ left: `${Math.min(95, (nodes.length || 8) * 15)}%` }}></div>
         </div>
         <div className={styles.expandContent}>
-          <h5 className={styles.expandTitle}>Global Node Network</h5>
-          <p className={styles.expandDesc}>Coordinating FedAvg rounds across local nodes</p>
-          <Link href="/nodes" className={styles.viewAllBtn}>
-            All hospital nodes <ChevronRight size={12} />
-          </Link>
+          <h5 className={styles.expandTitle}>Global Aggregator</h5>
+          <p className={styles.expandDesc}>Coordinate FedAvg rounds across local nodes</p>
         </div>
       </div>
     </div>

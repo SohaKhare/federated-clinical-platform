@@ -1,32 +1,38 @@
 .contentGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 240px;
-  gap: 1.75rem;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  gap: 1.25rem;
   height: 100%;
   width: 100%;
   box-sizing: border-box;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .leftColumn {
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
-  overflow-y: auto;
-  padding-right: 0.5rem;
+  gap: 1rem;
+  height: 100%;
+  min-height: 0;
   min-width: 0;
+  overflow: hidden;
+  justify-content: space-between;
 }
 
 .rightColumn {
   min-width: 0;
   width: 100%;
-  overflow-y: auto;
-  padding-right: 0.25rem;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .bottomGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.5rem;
-  min-height: 250px;
-  margin-bottom: 1.5rem;
+  gap: 1rem;
+  flex: 1.25;
+  min-height: 0;
+  height: 100%;
 }

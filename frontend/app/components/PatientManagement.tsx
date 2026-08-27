@@ -37,7 +37,7 @@ export default function PatientManagement({
     loadPatients();
   }, [loadPatients]);
 
-  const recent = patients.slice(0, 4);
+  const recent = patients.slice(0, 8);
 
   return (
     <div className={styles.container}>

@@ -3,9 +3,9 @@ import { useState } from 'react';
 import styles from './page.module.css';
 import PlatformSummary from '../components/PlatformSummary';
 import SummaryChart from '../components/SummaryChart';
-import AreaStats from '../components/AreaStats';
-import LogsWidget from '../components/LogsWidget';
-import HeatmapWidget from '../components/HeatmapWidget';
+import LiveNetworkWidget from '../components/LiveNetworkWidget';
+import ModelPerformanceWidget from '../components/ModelPerformanceWidget';
+import RecentActivityWidget from '../components/RecentActivityWidget';
 import PatientManagement from '../components/PatientManagement';
 import NodeManagement from '../components/NodeManagement';
 import { useAuth } from '@/lib/useAuth';
@@ -22,14 +22,14 @@ export default function Dashboard() {
         {/* Top Platform / Clinical Summary with Action Buttons */}
         <PlatformSummary onAddPatient={() => setShowAddPatientModal(true)} />
 
-        {/* Summary Chart */}
+        {/* Summary Chart with live federation polling & hover tooltips */}
         <SummaryChart key={`chart-${refreshKey}`} />
 
-        {/* Bottom Grid: Demographics/Area Stats, Logs Widget, Heatmap Widget */}
+        {/* Bottom 3 Widgets: Live Network (Accurate India Map), Model Performance, Recent Activity */}
         <div className={styles.bottomGrid}>
-          <AreaStats key={`stats-${refreshKey}`} />
-          <LogsWidget />
-          <HeatmapWidget />
+          <LiveNetworkWidget />
+          <ModelPerformanceWidget />
+          <RecentActivityWidget />
         </div>
       </div>
 
