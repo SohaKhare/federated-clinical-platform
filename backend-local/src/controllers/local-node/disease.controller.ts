@@ -4,6 +4,7 @@ import {
   addFutureBatch,
   getDiseaseMetrics,
   getDiseaseTrends,
+  MlServiceDownError,
   predictDisease,
   retrainDiseaseModel,
 } from "../../services/local-node-service/disease.service.js";
@@ -45,6 +46,10 @@ export async function predictDiseasePatient(req: Request, res: Response) {
     });
     return res.json(prediction);
   } catch (error) {
+    if (error instanceof MlServiceDownError) {
+      console.warn("Disease prediction: ML service (:8001) not reachable.");
+      return res.status(503).json({ message: "The disease model service is offline." });
+    }
     console.error("Disease prediction error:", error);
     return res.status(502).json({ message: "Unable to reach the disease model." });
   }
@@ -54,6 +59,10 @@ export async function getMetrics(_req: Request, res: Response) {
   try {
     return res.json(await getDiseaseMetrics());
   } catch (error) {
+    if (error instanceof MlServiceDownError) {
+      console.warn("Disease metrics: ML service (:8001) not reachable.");
+      return res.status(503).json({ message: "The disease model service is offline." });
+    }
     console.error("Disease metrics fetch error:", error);
     return res.status(502).json({ message: "Unable to fetch model metrics." });
   }
@@ -73,6 +82,12 @@ export async function getTrends(req: Request, res: Response) {
   try {
     return res.json(await getDiseaseTrends(granularity));
   } catch (error) {
+    if (error instanceof MlServiceDownError) {
+      // Service simply not running — return an empty series (200) so the
+      // dashboard renders its normal "no data" state instead of an error.
+      console.warn("Disease trends: ML service (:8001) not reachable — returning empty.");
+      return res.json([]);
+    }
     console.error("Disease trends fetch error:", error);
     return res.status(502).json({ message: "Unable to fetch disease trends." });
   }

@@ -236,6 +236,14 @@ class Handler(BaseHTTPRequestHandler):
 
         length = int(self.headers.get("Content-Length", "0"))
         raw_body = self.rfile.read(length)
+
+        # apply-model carries the raw .pt bytes, not JSON — dispatch it before
+        # any attempt to parse the body as JSON, or json.loads blows up on the
+        # binary payload and the model broadcast fails for every node.
+        if self.path == "/federation/apply-model":
+            self._apply_model(raw_body, self.headers.get("X-Node-Id"))
+            return
+
         body = json.loads(raw_body or b"{}")
 
         if self.path == "/federation/disease/predict":
@@ -244,9 +252,6 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/federation/disease/train":
             metrics = DiseaseModel().fit()
             self._json({"status": "trained", **metrics})
-            return
-        if self.path == "/federation/apply-model":
-            self._apply_model(raw_body, self.headers.get("X-Node-Id"))
             return
         if self.path == "/federation/predict":
             self._predict(body)

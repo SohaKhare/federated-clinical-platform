@@ -73,11 +73,31 @@ export interface DiseaseTrends {
   regional_top: Record<string, Array<{ diagnosis: string; count: number }>>;
 }
 
+/**
+ * Thrown when the Python ML service (:8001) can't be reached at all — a
+ * different failure from a real HTTP error it returns. Callers can degrade
+ * gracefully (empty payload) instead of logging a connection stack trace on
+ * every dashboard poll while the service is simply not running.
+ */
+export class MlServiceDownError extends Error {
+  constructor(cause?: unknown) {
+    super("Federated ML service is unreachable at " + env.federatedUrl);
+    this.name = "MlServiceDownError";
+    if (cause !== undefined) this.cause = cause;
+  }
+}
+
 async function mlFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${env.federatedUrl}${path}`, {
-    ...init,
-    headers: FEDERATION_HEADERS,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${env.federatedUrl}${path}`, {
+      ...init,
+      headers: FEDERATION_HEADERS,
+    });
+  } catch (error) {
+    // fetch() only rejects on network-level failure (service down, DNS, etc.).
+    throw new MlServiceDownError(error);
+  }
   if (!response.ok) {
     const detail = await response.text().catch(() => "");
     throw new Error(
