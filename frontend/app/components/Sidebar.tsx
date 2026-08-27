@@ -23,9 +23,11 @@ export default function Sidebar() {
 
   return (
     <aside className={styles.sidebar}>
-      <div className={styles.topLogo}>
-        <Shield size={24} color="#000" />
-      </div>
+      <Link href="/" className={styles.logoLink} title="Go to Dashboard" aria-label="Go to Dashboard">
+        <div className={styles.topLogo}>
+          <Shield size={24} color="#000" />
+        </div>
+      </Link>
 
       <nav className={styles.navIcons}>
         <Link href="/" className={`${styles.iconWrapper} ${pathname === '/' ? styles.active : ''}`} title="Dashboard">

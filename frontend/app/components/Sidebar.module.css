@@ -9,6 +9,19 @@
   height: 100%;
 }
 
+.logoLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.logoLink:hover .topLogo,
+.logoLink:focus-visible .topLogo {
+  background: rgba(0, 0, 0, 0.05);
+}
+
 .topLogo {
   width: 40px;
   height: 40px;
@@ -17,6 +30,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.2s ease;
 }
 
 .navIcons {
