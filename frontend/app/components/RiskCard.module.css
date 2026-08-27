@@ -1,0 +1,194 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sectionTitle {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.sectionHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.rerun {
+  border: 1px solid #dce8e5;
+  background: #fff;
+  color: #245d55;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.82rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.rerun:disabled { opacity: 0.55; cursor: wait; }
+
+/* --- primary risk --- */
+.primary {
+  background: #fff;
+  border-radius: var(--radius-card);
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  border-left: 6px solid var(--band-accent, #cbd7d4);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.primaryTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.condName {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.probRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+}
+.prob {
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+  line-height: 1;
+}
+.probLabel {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.triage {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 0.95rem;
+  color: #2b5c56;
+  background: #edf6f3;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+}
+.triageLabel { font-weight: 700; white-space: nowrap; }
+
+/* --- band pill --- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: var(--band-bg, #eef2f1);
+  color: var(--band-fg, #4a5b57);
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--band-fg, #4a5b57); }
+
+/* band palettes as data attributes */
+.low      { --band-bg: #edf8ef; --band-fg: #337344; --band-accent: #6ab07a; }
+.moderate { --band-bg: #fdf3e7; --band-fg: #b06f22; --band-accent: #e0a44f; }
+.high     { --band-bg: #fff0ee; --band-fg: #a34237; --band-accent: #d47b6f; }
+
+/* --- other conditions --- */
+.others { display: flex; flex-direction: column; gap: 0.6rem; }
+
+.row {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  border-left: 4px solid var(--band-accent, #cbd7d4);
+  overflow: hidden;
+}
+
+.rowHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0.9rem 1.1rem;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  color: var(--color-text-main);
+}
+.rowName { font-weight: 600; flex: 1; }
+.rowProb { font-weight: 700; font-variant-numeric: tabular-nums; }
+.chevron { color: var(--color-text-muted); font-size: 0.8rem; transition: transform 0.15s ease; }
+.chevronOpen { transform: rotate(90deg); }
+
+.detail {
+  padding: 0 1.1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+/* --- top features --- */
+.featuresLabel {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.features { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.feature {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  background: #f4f6f5;
+  color: #33413e;
+}
+.featUp { color: #a34237; font-weight: 700; }
+.featDown { color: #337344; font-weight: 700; }
+.featVal { color: var(--color-text-muted); }
+
+.completeness {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+.completeness b { color: #48635e; }
+
+/* --- history strip + provenance --- */
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  border-top: 1px dashed #e2ece9;
+  padding-top: 0.9rem;
+}
+.provenance { max-width: 30rem; }
+
+.empty {
+  background: #fff;
+  border-radius: var(--radius-card);
+  padding: 1.5rem;
+  color: var(--color-text-muted);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+.error { color: #a34237; }
