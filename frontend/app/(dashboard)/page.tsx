@@ -25,10 +25,10 @@ export default function Dashboard() {
         {/* Summary Chart with live federation polling & hover tooltips */}
         <SummaryChart key={`chart-${refreshKey}`} />
 
-        {/* Bottom 3 Widgets: Live Network (Accurate India Map), Model Performance, Recent Activity */}
-        <div className={styles.bottomGrid}>
+        {/* Bottom widgets: Live Network (Accurate India Map), Model Performance (global node only), Recent Activity */}
+        <div className={styles.bottomGrid} style={!isGlobal ? { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' } : undefined}>
           <LiveNetworkWidget />
-          <ModelPerformanceWidget />
+          {isGlobal && <ModelPerformanceWidget />}
           <RecentActivityWidget />
         </div>
       </div>
