@@ -1,5 +1,6 @@
 import { env } from "../../config/env.js";
 import { supabase } from "../../config/supabase.js";
+import { logRoundEvent } from "./activity-log.service.js";
 import type { ModelPerformanceSnapshot } from "../../interfaces/model/federation-round.interface.js";
 import type { Database } from "../../types/supabase.js";
 
@@ -29,9 +30,14 @@ export async function evaluateGlobalModel(
   const testPatients = await getTestPatients();
 
   if (testPatients.length === 0) {
+    logRoundEvent(`Round ${round}: skipping evaluation — test_patients is empty.`);
     console.warn(`Skipping model evaluation for round ${round}: test_patients is empty.`);
     return null;
   }
+
+  logRoundEvent(
+    `Round ${round}: evaluating global model against ${testPatients.length} held-out test patient(s)...`,
+  );
 
   let correct = 0;
   let lossSum = 0;
@@ -90,6 +96,10 @@ export async function evaluateGlobalModel(
   if (error) {
     throw new Error(error.message);
   }
+
+  logRoundEvent(
+    `Round ${round}: evaluation complete — accuracy ${(accuracy * 100).toFixed(1)}%, loss ${loss.toFixed(4)} (${scored} sample(s)).`,
+  );
 
   return {
     round_id: roundId,

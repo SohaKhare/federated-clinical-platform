@@ -1,0 +1,38 @@
+--------------------
+[2026-08-27T06:35:51.332Z] Round 2 started (264a04b8-164b-4c0c-9cf4-301e0e85778f) — target hospitals: KKS Hospital, BKC Delhi, aims delhi, HH 1, HH 2, HH 3, Hop Scotch, Dr.H.Saha Hospital, L Hospital
+[2026-08-27T06:36:34.385Z] Round 2: node KKS Hospital checked in with a trained update.
+[2026-08-27T06:36:34.891Z] Round 2: node BKC Delhi checked in with a trained update.
+[2026-08-27T06:36:35.125Z] Round 2: node aims delhi checked in with a trained update.
+[2026-08-27T06:36:35.352Z] Round 2: node HH 1 checked in with a trained update.
+[2026-08-27T06:36:35.600Z] Round 2: node HH 2 checked in with a trained update.
+[2026-08-27T06:36:35.818Z] Round 2: node HH 3 checked in with a trained update.
+[2026-08-27T06:36:36.039Z] Round 2: node Hop Scotch checked in with a trained update.
+[2026-08-27T06:36:36.270Z] Round 2: node Dr.H.Saha Hospital checked in with a trained update.
+[2026-08-27T06:36:36.491Z] Round 2: node L Hospital checked in with a trained update.
+[2026-08-27T06:36:36.610Z] Round 2: all nodes checked in — starting aggregation.
+[2026-08-27T06:36:39.902Z] Round 2: sending 9 node model(s) to the ML service for FedAvg aggregation.
+[2026-08-27T06:36:42.090Z] Round 2: aggregation complete — global model uploaded.
+[2026-08-27T06:36:46.041Z] Round 2: broadcasting the global model to 9 node(s).
+[2026-08-27T06:36:46.415Z] Round 2: broadcast completed — 9/9 node(s) synced.
+[2026-08-27T06:36:46.459Z] Round 2: evaluating global model against 30 held-out test patient(s)...
+[2026-08-27T06:36:54.687Z] Round 2: evaluation complete — accuracy 83.3%, loss 0.3732 (30 sample(s)).
+----------
+----------
+[2026-08-27T06:41:32.175Z] Round 3 started (61079e60-837d-47fb-be7f-8cb9b964e07f) — target hospitals: KKS Hospital, BKC Delhi, aims delhi, HH 1, HH 2, HH 3, Hop Scotch, Dr.H.Saha Hospital, L Hospital
+[2026-08-27T06:41:55.659Z] Round 3: node KKS Hospital checked in with a trained update.
+[2026-08-27T06:41:56.009Z] Round 3: node BKC Delhi checked in with a trained update.
+[2026-08-27T06:41:56.282Z] Round 3: node aims delhi checked in with a trained update.
+[2026-08-27T06:41:56.598Z] Round 3: node HH 1 checked in with a trained update.
+[2026-08-27T06:41:56.836Z] Round 3: node HH 2 checked in with a trained update.
+[2026-08-27T06:41:57.126Z] Round 3: node HH 3 checked in with a trained update.
+[2026-08-27T06:41:57.450Z] Round 3: node Hop Scotch checked in with a trained update.
+[2026-08-27T06:41:57.766Z] Round 3: node Dr.H.Saha Hospital checked in with a trained update.
+[2026-08-27T06:41:58.039Z] Round 3: node L Hospital checked in with a trained update.
+[2026-08-27T06:41:58.160Z] Round 3: all nodes checked in — starting aggregation.
+[2026-08-27T06:42:01.201Z] Round 3: sending 9 node model(s) to the ML service for FedAvg aggregation.
+[2026-08-27T06:42:01.614Z] Round 3: aggregation complete — global model uploaded.
+[2026-08-27T06:42:02.476Z] Round 3: broadcasting the global model to 9 node(s).
+[2026-08-27T06:42:02.817Z] Round 3: broadcast completed — 9/9 node(s) synced.
+[2026-08-27T06:42:02.844Z] Round 3: evaluating global model against 30 held-out test patient(s)...
+[2026-08-27T06:42:07.403Z] Round 3: evaluation complete — accuracy 86.7%, loss 0.4115 (30 sample(s)).
+----------

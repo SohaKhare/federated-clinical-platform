@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { env } from "../../config/env.js";
 import { supabase } from "../../config/supabase.js";
 import { evaluateGlobalModel } from "./evaluation.service.js";
+import { logRoundEvent, logRoundSeparator } from "./activity-log.service.js";
 import type {
   FederatedNodePhase,
   FederatedRoundBroadcastInput,
@@ -85,6 +86,13 @@ export async function startFederatedRound(
   const round = await reserveRoundNumber();
   const roundId = randomUUID();
   const now = new Date();
+
+  logRoundSeparator();
+  logRoundEvent(
+    `Round ${round} started (${roundId}) — target hospitals: ${selectedHospitals
+      .map((hospital) => hospital.hospitalName || hospital.userId)
+      .join(", ")}`,
+  );
 
   const record: RoundRecord = {
     roundId,
@@ -174,6 +182,10 @@ export async function recordFederatedCallback(
   record.status = record.status === "starting" ? "collecting" : record.status;
   record.updatedAt = now;
 
+  logRoundEvent(
+    `Round ${record.round}: node ${node.hospitalName || input.nodeId} checked in with a trained update.`,
+  );
+
   await supabase
     .from("patients")
     .update({ contributed_to_round: record.round })
@@ -203,9 +215,16 @@ export async function recordFederatedCallback(
   );
 
   if (allNodesReceived) {
+    logRoundEvent(`Round ${record.round}: all nodes checked in — starting aggregation.`);
+
     try {
       await aggregateRound(record);
     } catch (aggregationError) {
+      logRoundEvent(
+        `Round ${record.round}: aggregation FAILED — ${
+          aggregationError instanceof Error ? aggregationError.message : String(aggregationError)
+        }`,
+      );
       console.error(`Aggregation failed for round ${roundId}:`, aggregationError);
     }
   }
@@ -251,6 +270,10 @@ async function aggregateRound(record: RoundRecord): Promise<void> {
     sampleCounts.push(extractNumExamples(node.metrics));
   }
 
+  logRoundEvent(
+    `Round ${record.round}: sending ${modelPaths.length} node model(s) to the ML service for FedAvg aggregation.`,
+  );
+
   const response = await fetch(`${env.federatedUrl}/federation/aggregate`, {
     method: "POST",
     headers: {
@@ -278,6 +301,8 @@ async function aggregateRound(record: RoundRecord): Promise<void> {
     throw new Error(uploadError.message);
   }
 
+  logRoundEvent(`Round ${record.round}: aggregation complete — global model uploaded.`);
+
   const globalStoragePath = `${record.roundId}/global.pt`;
   const deliveredNodeIds: string[] = [];
 
@@ -298,6 +323,11 @@ async function aggregateRound(record: RoundRecord): Promise<void> {
 
       deliveredNodeIds.push(nodeId);
     } catch (pushError) {
+      logRoundEvent(
+        `Round ${record.round}: FAILED to push the global model to node ${nodeId} — ${
+          pushError instanceof Error ? pushError.message : String(pushError)
+        }`,
+      );
       console.error(`Failed to push model-ready to node ${nodeId}:`, pushError);
 
       // A node whose push failed never got the model, so it must not be
@@ -376,6 +406,10 @@ export async function broadcastFederatedWeights(
 
   record.status = "broadcasting";
 
+  logRoundEvent(
+    `Round ${record.round}: broadcasting the global model to ${targetNodeIds.length} node(s).`,
+  );
+
   const broadcastedNodes: string[] = [];
   const skippedNodes: string[] = [];
 
@@ -423,6 +457,10 @@ export async function broadcastFederatedWeights(
   record.updatedAt = now;
   await persistRound(record);
 
+  logRoundEvent(
+    `Round ${record.round}: broadcast ${record.status} — ${broadcastedNodes.length}/${targetNodeIds.length} node(s) synced.`,
+  );
+
   const evaluationNodeId = broadcastedNodes[0];
 
   if (record.status === "completed" && evaluationNodeId) {
@@ -430,9 +468,20 @@ export async function broadcastFederatedWeights(
     // weights, so any one of them can serve as the evaluation model. Runs
     // after the response-shaping snapshot below is built, and failures here
     // must not fail the broadcast itself — the round already succeeded.
-    evaluateGlobalModel(record.roundId, record.round, evaluationNodeId).catch((evaluationError) => {
-      console.error(`Model evaluation failed for round ${record.roundId}:`, evaluationError);
-    });
+    evaluateGlobalModel(record.roundId, record.round, evaluationNodeId)
+      .catch((evaluationError) => {
+        logRoundEvent(
+          `Round ${record.round}: model evaluation FAILED — ${
+            evaluationError instanceof Error ? evaluationError.message : String(evaluationError)
+          }`,
+        );
+        console.error(`Model evaluation failed for round ${record.roundId}:`, evaluationError);
+      })
+      .finally(() => {
+        logRoundSeparator();
+      });
+  } else {
+    logRoundSeparator();
   }
 
   return {

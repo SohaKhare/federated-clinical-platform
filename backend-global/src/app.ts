@@ -7,6 +7,7 @@ import { env } from "./config/env.js";
 import nodeRoutes from "./routes/node.routes.js";
 import logRoutes from "./routes/log.routes.js";
 import globalFederatedRoutes from "./routes/global-federated.routes.js";
+import activityLogRoutes from "./routes/activity-log.routes.js";
 
 const app = express();
 
@@ -53,5 +54,7 @@ app.use("/global/nodes", nodeRoutes);
 app.use("/global/logs", logRoutes);
 
 app.use("/global/api/federated", globalFederatedRoutes);
+
+app.use("/global/activity", activityLogRoutes);
 
 export default app;
