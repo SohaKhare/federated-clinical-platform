@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import styles from './logs.module.css';
 import { Download, ChevronDown, ChevronUp, RefreshCw, Filter } from 'lucide-react';
 import { api, type LogEntry, type FederatedNode } from '@/lib/api';
+import { parseUtcIso } from '@/lib/time';
 import { useAuth } from '@/lib/useAuth';
 
 export default function LogsPage() {
@@ -52,12 +53,25 @@ export default function LogsPage() {
   };
 
   const formatTimestamp = (iso: string) => {
-    const d = new Date(iso);
+    // Supabase returns offset-less UTC strings; parseUtcIso tags them as UTC
+    // so the Asia/Kolkata conversion below is actually applied.
+    const d = parseUtcIso(iso);
     return d.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit', second: '2-digit',
       hour12: false,
     });
+  };
+
+  // Render every time-like string on this page as IST — covers the main
+  // timestamp column plus any ISO datetimes nested inside log metadata.
+  const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2})?)?/;
+  const formatValue = (value: unknown): string => {
+    const str = String(value);
+    return ISO_DATE_RE.test(str) && !isNaN(parseUtcIso(str).getTime())
+      ? `${formatTimestamp(parseUtcIso(str).toISOString())} (IST)`
+      : str;
   };
 
   const getNodeName = (nodeId: string) => {
@@ -242,7 +256,7 @@ export default function LogsPage() {
                               </tr>
                               <tr>
                                 <td className={styles.innerKey}>timestamp</td>
-                                <td className={styles.innerValue}>{log.timestamp}</td>
+                                <td className={styles.innerValue}>{formatTimestamp(log.timestamp)} (IST)</td>
                               </tr>
                               {Object.entries(log.metadata).map(([key, value]) => (
                                 <tr key={key}>
@@ -255,14 +269,14 @@ export default function LogsPage() {
                                             <tr key={subKey}>
                                               <td className={styles.innerKey} style={{ borderBottom: '1px dashed #222', padding: '0.5rem' }}>{subKey}</td>
                                               <td className={styles.innerValue} style={{ borderBottom: '1px dashed #222', padding: '0.5rem', color: '#a3be8c', fontFamily: 'monospace' }}>
-                                                {String(subValue)}
+                                                {formatValue(subValue)}
                                               </td>
                                             </tr>
                                           ))}
                                         </tbody>
                                       </table>
                                     ) : (
-                                      String(value)
+                                      formatValue(value)
                                     )}
                                   </td>
                                 </tr>

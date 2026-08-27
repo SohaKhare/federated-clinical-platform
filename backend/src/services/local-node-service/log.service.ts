@@ -64,15 +64,26 @@ export async function getLogs(
   };
 }
 
+/**
+ * PostgREST serializes `timestamptz` without a timezone designator
+ * ("2026-08-27T04:44:02.892") even though the stored value is UTC. Re-emit a
+ * fully-qualified UTC ISO string so browser-side `new Date()` — which parses
+ * offset-less strings as local time — displays the correct instant everywhere.
+ */
+function toUtcIso(value: string): string {
+  const hasTz = /(Z|[+-]\d{2}:?\d{2})$/i.test(value);
+  return new Date(hasTz ? value : `${value}Z`).toISOString();
+}
+
 function toLog(log: LogRow): Log {
   return {
     log_id: log.log_id,
     node_id: log.node_id,
-    timestamp: log.timestamp,
+    timestamp: toUtcIso(log.timestamp),
     direction: log.direction as Log["direction"],
     round: log.round,
     metadata: (log.metadata ?? {}) as Log["metadata"],
     status: log.status as Log["status"],
-    created_at: log.created_at,
+    created_at: toUtcIso(log.created_at),
   };
 }

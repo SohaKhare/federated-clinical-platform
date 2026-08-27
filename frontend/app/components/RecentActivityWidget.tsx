@@ -4,6 +4,7 @@ import Link from 'next/link';
 import styles from './RecentActivityWidget.module.css';
 import { CheckCircle2, ArrowDownToLine, FileCheck, Radio } from 'lucide-react';
 import { api, type LogEntry } from '@/lib/api';
+import { parseUtcIso } from '@/lib/time';
 
 export default function RecentActivityWidget() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -59,7 +60,7 @@ export default function RecentActivityWidget() {
   // If live logs exist, format the most recent ones, otherwise fallback to defaults
   const displayActivities = logs.length > 0
     ? logs.slice(0, 4).map((l, idx) => {
-        const timeStr = new Date(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const timeStr = parseUtcIso(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
         let title = `Round ${l.round} update`;
         let subtitle = l.direction === 'outgoing' ? 'Encrypted weights submitted' : 'Global model received';
         let icon = <CheckCircle2 size={15} />;
