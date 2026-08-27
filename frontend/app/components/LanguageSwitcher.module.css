@@ -1,0 +1,115 @@
+.wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.wrapper.floating {
+  position: absolute;
+  top: 1rem;
+  right: 1.25rem;
+  z-index: 50;
+}
+
+/* Pill styled to match the header's search/profile chrome */
+.button {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background-color: #f7f7f9;
+  color: var(--color-text-main);
+  border-radius: 24px;
+  padding: 0.55rem 0.95rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: box-shadow 0.15s ease;
+  line-height: 1;
+}
+
+.button:hover {
+  box-shadow: 0 0 0 2px #e5e5ea inset;
+}
+
+.label {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 210px;
+  background: #fff;
+  border: 1px solid #ececf1;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.10);
+  padding: 6px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.item:hover {
+  background-color: #f5f5f7;
+}
+
+.itemActive {
+  background-color: var(--color-green-light, #eef4ee);
+}
+
+.nameNative {
+  flex: none;
+  min-width: 74px;
+  color: var(--color-text-main);
+  font-weight: 600;
+}
+
+.nameEnglish {
+  flex: 1;
+  color: var(--color-text-muted, #7a7a80);
+  font-size: 0.78rem;
+}
+
+.check {
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-main);
+  display: flex;
+  align-items: center;
+}
+
+/* Tiny inline loading ring shown while batches are in flight */
+@keyframes fcpLangSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  border-top-color: rgba(0, 0, 0, 0.65);
+  animation: fcpLangSpin 0.7s linear infinite;
+}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/lib/ToastContext";
+import { TranslationProvider } from "@/lib/i18n/TranslationContext";
 import ToastContainer from "./components/Toast";
 
 const geistSans = Geist({
@@ -27,8 +28,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body className="min-h-full flex flex-col">
         <ToastProvider>
-          <ToastContainer />
-          {children}
+          <TranslationProvider>
+            <ToastContainer />
+            {children}
+          </TranslationProvider>
         </ToastProvider>
       </body>
     </html>

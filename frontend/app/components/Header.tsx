@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import styles from './Header.module.css';
 import { Search, LogOut } from 'lucide-react';
 import { useAuth } from '@/lib/useAuth';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const searchableRoutes = [
   { name: 'Dashboard Overview', path: '/', keywords: ['home', 'main'] },
@@ -87,6 +88,7 @@ export default function Header() {
       </div>
       
       <div className={styles.actions}>
+        <LanguageSwitcher variant="header" />
         <div className={styles.profileInfo}>
           <span className={styles.userName}>
             {loading ? '…' : user ? user.hospitalName ?? user.email : 'Guest'}

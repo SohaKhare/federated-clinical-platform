@@ -1,8 +1,9 @@
-"use client";
+'use client';
 import { useState } from 'react';
 import styles from './login.module.css';
 import { Shield } from 'lucide-react';
 import { api, type UserRole } from '@/lib/api';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 export default function Login() {
   const [role, setRole] = useState<UserRole>('local');
@@ -13,6 +14,7 @@ export default function Login() {
 
   return (
     <div className={styles.loginWrapper}>
+      <LanguageSwitcher variant="floating" />
       <div className={styles.loginCard}>
         <div className={styles.logoBox}>
           <Shield size={32} color="#000" />
