@@ -52,9 +52,17 @@ export interface HistoryWindow {
   to: string | null;
 }
 
+/**
+ * Which checkpoint served the prediction. "baseline" means no federated round
+ * has produced a model for this node yet and the locally-trained starter model
+ * was used — the card must not claim federated provenance in that case.
+ */
+export type ModelSource = "federated" | "baseline";
+
 export interface PatientPrediction {
   patient_id: string;
   model_version: string | null;
+  model_source: ModelSource;
   regions_trained: number | null;
   history_window: HistoryWindow | null;
   generated_at: string;
@@ -80,6 +88,7 @@ export interface RawConditionPrediction {
 
 export interface RawPatientPrediction {
   model_version: string | null;
+  model_source?: ModelSource;
   regions_trained: number | null;
   history_window: HistoryWindow | null;
   predictions: RawConditionPrediction[];

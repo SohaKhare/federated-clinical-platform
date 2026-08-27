@@ -26,6 +26,11 @@ from federated.task import (
 # and `feature_schema` (see _predict); until then we synthesise this
 # single-condition manifest so the enriched prediction contract works today.
 HEART_CONDITION = {"key": "heart_disease", "label": "Heart disease"}
+
+# Checkpoint written by `federated.run` before any federated round has pushed a
+# node-specific model. Serving falls back to it so the card works on a fresh
+# install; once a round completes, `models/<node_id>.pt` takes precedence.
+BASELINE_MODEL = "clinical_model.pt"
 HEART_FEATURE_LABELS = {
     "age": "Age",
     "sex": "Sex",
@@ -318,10 +323,14 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(400, "nodeId is required")
             return
 
-        model_path = Path.cwd() / "models" / f"{node_id}.pt"
-        if not model_path.exists():
-            self.send_error(404, f"No trained model for node {node_id}")
-            return
+        models_dir = Path.cwd() / "models"
+        model_path = models_dir / f"{node_id}.pt"
+        federated = model_path.exists()
+        if not federated:
+            model_path = models_dir / BASELINE_MODEL
+            if not model_path.exists():
+                self.send_error(404, f"No trained model for node {node_id}")
+                return
 
         snapshot, history_window = _resolve_snapshot(body)
         row, defaulted = _heart_feature_row(snapshot)
@@ -359,8 +368,10 @@ class Handler(BaseHTTPRequestHandler):
         }
 
         self._json({
-            "model_version": checkpoint.get("model_version") or "local",
-            "regions_trained": checkpoint.get("regions_trained"),
+            "model_version": checkpoint.get("model_version")
+            or ("local" if federated else "baseline"),
+            "model_source": "federated" if federated else "baseline",
+            "regions_trained": checkpoint.get("regions_trained") if federated else None,
             "history_window": history_window,
             "predictions": [prediction],
             # Backward-compat for the thin POST /local/patients/predict consumer.

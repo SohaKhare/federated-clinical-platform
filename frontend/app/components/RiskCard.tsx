@@ -157,9 +157,12 @@ export default function RiskCard({
         </span>
         <span className={styles.provenance}>
           Model {prediction.model_version ?? 'local'}
-          {prediction.regions_trained
-            ? ` · trained across ${prediction.regions_trained} regions, no records shared`
-            : ' · federated across hospitals, no records shared'}
+          {' · '}
+          {prediction.model_source === 'baseline'
+            ? 'local baseline model — not yet federated'
+            : prediction.regions_trained
+              ? `trained across ${prediction.regions_trained} regions, no records shared`
+              : 'federated across hospitals, no records shared'}
         </span>
       </div>
     </div>

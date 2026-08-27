@@ -200,6 +200,7 @@ export async function predictPatientConditions(input: {
   return {
     patient_id: input.patientId,
     model_version: raw.model_version ?? null,
+    model_source: raw.model_source ?? "baseline",
     regions_trained: raw.regions_trained ?? null,
     history_window: raw.history_window ?? null,
     generated_at: new Date().toISOString(),
