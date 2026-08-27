@@ -17,6 +17,10 @@ import {
   predictPatient,
   predictPatientById,
 } from "../controllers/local-node/predict.controller.js";
+import {
+  addFuturePatients,
+  predictDiseasePatient,
+} from "../controllers/local-node/disease.controller.js";
 import { requireAuth, requireRole } from "../middleware/auth.middleware.js";
 
 const ACCEPTED_REPORT_MIME = /^(image\/(png|jpe?g|webp|bmp|tiff)|application\/pdf)$/;
@@ -81,9 +85,17 @@ router.get("/", getPatients);
 
 router.get("/presentation-batch", getPresentationBatch);
 
+// New-dataset flow: 10-20 unseen rows (3001-5000) inserted into patients2
+// with XGBoost predictions attached.
+router.post("/future-batch", addFuturePatients);
+
 router.get("/since-last-round", getPatientsSinceLastRound);
 
+// Legacy heart-model prediction kept for compatibility; the new XGBoost
+// diagnosis classifier lives at /predict-disease.
 router.post("/predict", predictPatient);
+
+router.post("/predict-disease", predictDiseasePatient);
 
 router.post("/", createPatient);
 

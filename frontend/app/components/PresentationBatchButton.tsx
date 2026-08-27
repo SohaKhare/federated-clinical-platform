@@ -11,19 +11,19 @@ export default function PresentationBatchButton({ onAdded }: { onAdded?: () => v
   const [loading, setLoading] = useState(false);
   const { success, error: toastError } = useToast();
 
-  async function addDailyBatch() {
+  async function addFutureBatch() {
     setLoading(true);
-    setStatus('Loading held-out patients...');
+    setStatus('Loading unseen patients...');
     try {
-      const batch = await api.getPresentationBatch() as { hospital_id: number; patients: unknown[] };
-      setAddedCount(batch.patients.length);
+      const batch = await api.addFutureBatch();
+      setAddedCount(batch.added);
       onAdded?.();
-      const msg = `${batch.patients.length} held-out patients successfully added for Hospital ${batch.hospital_id}!`;
+      const msg = `${batch.added} new patients added with XGBoost predictions!`;
       setStatus(msg);
       success(msg);
     } catch (error) {
-      console.error('Presentation batch error:', error);
-      const errMsg = 'Could not load the presentation pool.';
+      console.error('Future batch error:', error);
+      const errMsg = 'Could not load the future patient pool.';
       setStatus(errMsg);
       toastError(errMsg);
     } finally {
@@ -33,11 +33,11 @@ export default function PresentationBatchButton({ onAdded }: { onAdded?: () => v
 
   return (
     <div className={styles.wrap}>
-      <button className={styles.button} onClick={addDailyBatch} disabled={loading}>
-        {loading ? 'Adding...' : "Add today's 10–20 patients"}
+      <button className={styles.button} onClick={addFutureBatch} disabled={loading}>
+        {loading ? 'Adding...' : 'Add 10–20 Patients'}
       </button>
       {status && <span className={styles.status}>{status}</span>}
-      {addedCount > 0 && <span className={styles.count}>Local evaluation rows: {addedCount}</span>}
+      {addedCount > 0 && <span className={styles.count}>Unseen rows inserted: {addedCount}</span>}
     </div>
   );
 }

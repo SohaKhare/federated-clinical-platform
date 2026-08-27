@@ -16,7 +16,7 @@ export default function DoctorPage() {
   const [selectedId, setSelectedId] = useState('');
   const [form, setForm] = useState(emptyForm);
   const [symptomsText, setSymptomsText] = useState('');
-  const [prediction, setPrediction] = useState<{ prediction: boolean; probability: number } | null>(null);
+  const [prediction, setPrediction] = useState<{ predicted_diagnosis: string; confidence: number } | null>(null);
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const { success, error: toastError, info } = useToast();
@@ -78,9 +78,16 @@ export default function DoctorPage() {
     setSaving(true); setMessage('Running the local PyTorch model...');
     info('Running local PyTorch model evaluation...');
     try {
-      const res = await api.predictPatient(readForm());
+      const input = readForm();
+      const res = await api.predictDisease({
+        age: input.age,
+        gender: input.sex === 'F' ? 'Female' : 'Male',
+        current_symptoms: input.symptoms,
+        previous_diagnosis: input.diagnosed_diseases[0],
+        medical_conditions: Object.keys(input.health_conditions)[0],
+      });
       setPrediction(res);
-      success(`Prediction completed: ${res.prediction ? 'Risk detected' : 'No risk detected'} (${(res.probability * 100).toFixed(1)}% prob).`);
+      success(`Prediction completed: ${res.predicted_diagnosis} (${(res.confidence * 100).toFixed(1)}% confidence).`);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Unable to run prediction.';
       setMessage(msg);
@@ -107,7 +114,7 @@ export default function DoctorPage() {
           </div>
           <label>Symptoms <small>comma separated</small><input value={symptomsText} onChange={(e) => setSymptomsText(e.target.value)} placeholder="chest pain, fatigue" /></label>
           <div className={styles.actions}><button className={styles.primary} onClick={savePatient} disabled={saving || !form.name.trim()}>{saving ? 'Saving...' : selectedId ? 'Save changes' : 'Add patient'}</button><button className={styles.secondary} onClick={runPrediction} disabled={saving}>Run prediction</button></div>
-          {prediction && <div className={prediction.prediction ? styles.risk : styles.safe}><strong>{prediction.prediction ? 'Heart disease risk detected' : 'No heart disease risk detected'}</strong><span>Model probability: {(prediction.probability * 100).toFixed(1)}%</span></div>}
+          {prediction && <div className={styles.safe}><strong>Predicted diagnosis: {prediction.predicted_diagnosis}</strong><span>Model confidence: {(prediction.confidence * 100).toFixed(1)}%</span></div>}
         </section>
 
         <section className={styles.panel}>

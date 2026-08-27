@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import styles from './ModelPerformanceWidget.module.css';
 import { api, type ModelPerformanceSnapshot } from '../../lib/api';
 import {
@@ -24,9 +24,36 @@ function toChartData(snapshots: ModelPerformanceSnapshot[]): ChartPoint[] {
     loss: snapshot.loss,
   }));
 }
+import { api, type DiseaseMetrics } from '@/lib/api';
 
 export default function ModelPerformanceWidget() {
-  const [metric, setMetric] = useState<'accuracy' | 'loss'>('accuracy');
+  const [metrics, setMetrics] = useState<DiseaseMetrics | null>(null);
+  const [showConfusion, setShowConfusion] = useState(false);
+  const [error, setError] = useState('');
+
+  const load = useCallback(() => {
+    api.getDiseaseMetrics()
+      .then(setMetrics)
+      .catch(() => setError('Model not trained yet — run training first.'));
+  }, []);
+
+  useEffect(() => {
+    load();
+    const interval = setInterval(load, 15000);
+    return () => clearInterval(interval);
+  }, [load]);
+
+  // Trend of per-class recall across the confusion matrix diagonal — a real
+  // signal derived from the held-out test set rather than mock round data.
+  const chartData = metrics
+    ? metrics.classes.map((label, i) => ({
+        name: label.length > 14 ? `${label.slice(0, 13)}…` : label,
+        accuracy: Math.round(
+          ((metrics.confusion_matrix[i]?.[i] ?? 0) /
+            Math.max(1, metrics.confusion_matrix[i]?.reduce((a, b) => a + b, 0) ?? 1)) * 100,
+        ),
+      }))
+    : [];
   const [performanceData, setPerformanceData] = useState<ChartPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,16 +85,20 @@ export default function ModelPerformanceWidget() {
             Global model {metric} over rounds
           </span>
         </div>
-        <select
-          className={styles.dropdownSelect}
-          value={metric}
-          onChange={(e) => setMetric(e.target.value as 'accuracy' | 'loss')}
-          aria-label="Select metric"
-        >
-          <option value="accuracy">Accuracy ⌵</option>
-          <option value="loss">Loss ⌵</option>
-        </select>
+        <button className={styles.dropdownSelect} onClick={() => setShowConfusion((v) => !v)}>
+          {showConfusion ? 'Hide matrix ⌵' : 'Confusion matrix ⌵'}
+        </button>
       </div>
+
+      {metrics && (
+        <div style={{ display: 'flex', gap: 12, padding: '0 16px', flexWrap: 'wrap' }}>
+          <MetricPill label="Accuracy" value={`${(metrics.accuracy * 100).toFixed(1)}%`} />
+          <MetricPill label="Precision" value={`${(metrics.precision * 100).toFixed(1)}%`} />
+          <MetricPill label="Recall" value={`${(metrics.recall * 100).toFixed(1)}%`} />
+          <MetricPill label="F1" value={`${(metrics.f1 * 100).toFixed(1)}%`} />
+        </div>
+      )}
+      {error && <p style={{ fontSize: 11, color: '#94a3b8', padding: '4px 16px' }}>{error}</p>}
 
       <div className={styles.chartContainer}>
         {loading ? (
@@ -77,7 +108,7 @@ export default function ModelPerformanceWidget() {
         ) : (
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
-            data={performanceData}
+            data={chartData}
             margin={{ top: 12, right: 10, left: -24, bottom: 0 }}
           >
             <defs>
@@ -87,11 +118,12 @@ export default function ModelPerformanceWidget() {
               </linearGradient>
             </defs>
             <XAxis
-              dataKey="round"
+              dataKey="name"
               tickLine={false}
               axisLine={{ stroke: '#f1f5f9' }}
-              tick={{ fill: '#64748b', fontSize: 10, fontWeight: 500 }}
+              tick={{ fill: '#64748b', fontSize: 9, fontWeight: 500 }}
               dy={5}
+              interval={0}
             />
             {metric === 'accuracy' ? (
               <YAxis
@@ -138,6 +170,66 @@ export default function ModelPerformanceWidget() {
         </ResponsiveContainer>
         )}
       </div>
+
+      {showConfusion && metrics && (
+        <div style={{ overflowX: 'auto', maxHeight: 220, margin: '0 16px 12px' }}>
+          <table style={{ borderCollapse: 'collapse', fontSize: 10, width: '100%' }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'left', padding: 4, color: '#64748b' }}>actual ↓ / pred →</th>
+                {metrics.classes.map((c) => (
+                  <th key={c} style={{ padding: 4, color: '#64748b', fontWeight: 600 }}>
+                    {c.length > 12 ? `${c.slice(0, 11)}…` : c}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {metrics.confusion_matrix.map((row, i) => (
+                <tr key={metrics.classes[i]}>
+                  <td style={{ padding: 4, color: '#64748b', whiteSpace: 'nowrap' }}>
+                    {metrics.classes[i].length > 12 ? `${metrics.classes[i].slice(0, 11)}…` : metrics.classes[i]}
+                  </td>
+                  {row.map((count, j) => (
+                    <td
+                      key={j}
+                      style={{
+                        padding: 4,
+                        textAlign: 'center',
+                        background:
+                          i === j ? 'rgba(13,148,136,0.15)' : count > 0 ? 'rgba(239,68,68,0.08)' : 'transparent',
+                        borderRadius: 4,
+                        fontWeight: i === j ? 700 : 400,
+                      }}
+                    >
+                      {count}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MetricPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        flex: '1 1 auto',
+        minWidth: 70,
+        background: '#f8fafc',
+        border: '1px solid #e2e8f0',
+        borderRadius: 8,
+        padding: '6px 8px',
+        textAlign: 'center',
+      }}
+    >
+      <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.5, color: '#64748b' }}>{label}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: '#0d9488' }}>{value}</div>
     </div>
   );
 }

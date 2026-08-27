@@ -290,6 +290,57 @@ export interface FederatedRoundSnapshot {
   synced_nodes: number;
 }
 
+// ---------- XGBoost disease classifier (patient_medical_dataset.csv) ----------
+
+export interface DiseasePrediction {
+  predicted_diagnosis: string;
+  confidence: number;
+  probabilities: Record<string, number>;
+}
+
+export interface DiseaseMetrics {
+  accuracy: number;
+  precision: number;
+  recall: number;
+  f1: number;
+  confusion_matrix: number[][];
+  classes: string[];
+  train_rows: number;
+  test_rows: number;
+  trained_at: string;
+}
+
+export interface DiseaseTrendPoint {
+  period: string;
+  total: number;
+  [diagnosis: string]: unknown;
+}
+
+export interface DiseaseTrends {
+  granularity: string;
+  points: DiseaseTrendPoint[];
+  diseases: string[];
+  regional_top: Record<string, Array<{ diagnosis: string; count: number }>>;
+}
+
+export interface FuturePoolPatient extends DiseasePredictionHolder {
+  source_row: number;
+  patient_id: string;
+  previous_diagnosis: string;
+  medical_conditions: string;
+  current_symptoms: string[];
+  age: number;
+  gender: string;
+  hospital: string;
+  location: string;
+  diagnosis_date: string;
+  actual_diagnosis: string;
+}
+
+interface DiseasePredictionHolder {
+  prediction: DiseasePrediction;
+}
+
 export interface ModelPerformanceSnapshot {
   round_id: string;
   round: number;
@@ -463,6 +514,40 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({}),
     });
+  },
+
+  // --- DISEASE MODEL (XGBoost, patient_medical_dataset.csv) ---
+  predictDisease: async (input: {
+    age: number;
+    gender: string;
+    previous_diagnosis?: string;
+    medical_conditions?: string;
+    current_symptoms?: string | string[];
+    hospital?: string;
+    location?: string;
+    diagnosis_date?: string;
+  }): Promise<DiseasePrediction> => {
+    return fetcher('/local/patients/predict-disease', { method: 'POST', body: JSON.stringify(input) });
+  },
+
+  getDiseaseMetrics: async (): Promise<DiseaseMetrics> => {
+    return fetcher('/local/model/disease-metrics');
+  },
+
+  retrainDiseaseModel: async (): Promise<{ status: string } & DiseaseMetrics> => {
+    return fetcher('/local/model/disease-retrain', { method: 'POST', body: JSON.stringify({}) });
+  },
+
+  getDiseaseTrends: async (granularity: 'month' | 'year' = 'month'): Promise<DiseaseTrends[]> => {
+    return fetcher(`/local/research/trends?granularity=${granularity}`);
+  },
+
+  addFutureBatch: async (): Promise<{
+    hospital_id: string;
+    added: number;
+    patients: FuturePoolPatient[];
+  }> => {
+    return fetcher('/local/patients/future-batch', { method: 'POST', body: JSON.stringify({}) });
   },
 
   // --- LOGS (both nodes serve /logs at their own prefix — follows the

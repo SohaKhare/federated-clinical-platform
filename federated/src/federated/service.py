@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -10,6 +11,12 @@ import pandas as pd
 import torch
 
 from federated.aggregation import fedavg_aggregate
+from federated.disease_model import (
+    DiseaseModel,
+    disease_trends,
+    future_pool,
+    get_model,
+)
 from federated.model import ClinicalModel
 from federated.run import run_federated
 from federated.task import (
@@ -200,36 +207,55 @@ def _gradient_x_input(
 
 
 class Handler(BaseHTTPRequestHandler):
-    def do_POST(self) -> None:
-        if self.path not in (
-            "/federation/runs",
-            "/federation/predict",
-            "/federation/aggregate",
-            "/federation/apply-model",
-        ):
-            self.send_error(404)
-            return
-
-        if self.headers.get("X-Federation-Key") != os.environ.get(
+    def _authorized(self) -> bool:
+        if self.headers.get("X-Federation-Key") == os.environ.get(
             "FEDERATION_SHARED_SECRET", "development-federation-key"
         ):
-            self.send_error(401, "Invalid federation key")
+            return True
+        self.send_error(401, "Invalid federation key")
+        return False
+
+    def do_GET(self) -> None:
+        if not self._authorized():
+            return
+        if self.path.startswith("/federation/disease/metrics"):
+            self._disease_metrics()
+            return
+        if self.path.startswith("/federation/disease/trends"):
+            granularity = "year" if "granularity=year" in self.path else "month"
+            self._json(disease_trends(granularity))
+            return
+        if self.path.startswith("/federation/disease/future-batch"):
+            self._future_batch()
+            return
+        self.send_error(404)
+
+    def do_POST(self) -> None:
+        if not self._authorized():
             return
 
         length = int(self.headers.get("Content-Length", "0"))
         raw_body = self.rfile.read(length)
+        body = json.loads(raw_body or b"{}")
 
+        if self.path == "/federation/disease/predict":
+            self._disease_predict(body)
+            return
+        if self.path == "/federation/disease/train":
+            metrics = DiseaseModel().fit()
+            self._json({"status": "trained", **metrics})
+            return
         if self.path == "/federation/apply-model":
             self._apply_model(raw_body, self.headers.get("X-Node-Id"))
             return
-
-        body = json.loads(raw_body or b"{}")
         if self.path == "/federation/predict":
             self._predict(body)
             return
-
         if self.path == "/federation/aggregate":
             self._aggregate(body)
+            return
+        if self.path != "/federation/runs":
+            self.send_error(404)
             return
 
         required = ["round_id", "round", "node_ids", "callback_url"]
@@ -378,6 +404,68 @@ class Handler(BaseHTTPRequestHandler):
             "prediction": probability >= 0.5,
             "probability": round(probability, 4),
         })
+
+    def _disease_predict(self, body: dict[str, object]) -> None:
+        """XGBoost diagnosis prediction from the new medical dataset features."""
+        try:
+            model = get_model()
+            model.ensure_loaded()
+            row = pd.DataFrame(
+                [
+                    {
+                        "age": float(body.get("age", 0)),
+                        "gender": str(body.get("gender", "Male")),
+                        "previous_diagnosis": str(body.get("previous_diagnosis", "None")),
+                        "medical_conditions": str(body.get("medical_conditions", "None")),
+                        "current_symptoms": str(body.get("current_symptoms", "")),
+                        "hospital": str(body.get("hospital", "")),
+                        "location": str(body.get("location", "")),
+                        "diagnosis_date": str(body.get("diagnosis_date", "")),
+                    }
+                ]
+            )
+            result = model.predict_rows(row)[0]
+            self._json(result)
+        except FileNotFoundError as error:
+            self.send_error(503, str(error))
+        except Exception as error:  # noqa: BLE001 - surface as 500 with message
+            print(f"Disease predict failed: {error}")
+            self.send_error(500, "Prediction failed")
+
+    def _disease_metrics(self) -> None:
+        metrics_path = Path.cwd() / "models" / "disease_xgb_metrics.json"
+        if not metrics_path.exists():
+            self.send_error(404, "Model not trained yet — POST /federation/disease/train first")
+            return
+        self._json(json.loads(metrics_path.read_text()))
+
+    def _future_batch(self) -> None:
+        """Random 10-20 unseen rows from the 3001-5000 pool, with predictions."""
+        count = random.randint(10, 20)
+        pool = future_pool()
+        sample = pool.sample(n=min(count, len(pool)), random_state=None)
+        predictions = get_model().predict_rows(sample)
+        patients = []
+        for (_, row), prediction in zip(sample.iterrows(), predictions):
+            patients.append(
+                {
+                    "source_row": int(row["_row_number"]),
+                    "patient_id": row["patient_id"],
+                    "previous_diagnosis": row["previous_diagnosis"],
+                    "medical_conditions": row["medical_conditions"],
+                    "current_symptoms": [
+                        s.strip() for s in str(row["current_symptoms"]).split(",") if s.strip()
+                    ],
+                    "age": int(row["age"]),
+                    "gender": row["gender"],
+                    "hospital": row["hospital"],
+                    "location": row["location"],
+                    "diagnosis_date": row["diagnosis_date"],
+                    "actual_diagnosis": row["diagnosis"],
+                    "prediction": prediction,
+                }
+            )
+        self._json({"patients": patients})
 
     def _json(self, payload: dict[str, object]) -> None:
         self.send_response(200)

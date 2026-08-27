@@ -5,6 +5,7 @@ import PlatformSummary from '../components/PlatformSummary';
 import SummaryChart from '../components/SummaryChart';
 import LiveNetworkWidget from '../components/LiveNetworkWidget';
 import ModelPerformanceWidget from '../components/ModelPerformanceWidget';
+import DiseaseTrendChart from '../components/DiseaseTrendChart';
 import RecentActivityWidget from '../components/RecentActivityWidget';
 import PatientManagement from '../components/PatientManagement';
 import NodeManagement from '../components/NodeManagement';
@@ -31,6 +32,9 @@ export default function Dashboard() {
           {isGlobal && <ModelPerformanceWidget />}
           <RecentActivityWidget />
         </div>
+
+        {/* Disease trends over time (diagnosis_date aggregation) — local role only */}
+        {!isGlobal && <DiseaseTrendChart />}
       </div>
 
       {/* Right Panel: Role-Specific Management */}

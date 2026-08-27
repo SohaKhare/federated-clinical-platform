@@ -8,15 +8,20 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "catboost>=1.2,<2.0",
+    "catboost>=1.2,<2.0",
     "flwr[simulation]>=1.34,<2.0",
+    "joblib>=1.3,<2.0",
     "pandas>=2.2,<3.0",
     "pillow>=11.0,<12.0",
     "scikit-learn>=1.9.0",
     "torch>=2.7,<3.0",
+    "xgboost>=2.0,<3.0",
 ]
 
 [project.scripts]
 federated = "federated:main"
+train-disease-model = "federated.disease_model:main"
 prepare-data = "federated.prepare_data:main"
 prepare-xray-data = "federated.prepare_xray_data:main"
 run-federated = "federated.run:main"
