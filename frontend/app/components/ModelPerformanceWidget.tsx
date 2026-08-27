@@ -1,7 +1,7 @@
 "use client";
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import styles from './ModelPerformanceWidget.module.css';
-import { api, type ModelPerformanceSnapshot } from '../../lib/api';
+import { api, type DiseaseMetrics } from '@/lib/api';
 import {
   AreaChart,
   Area,
@@ -10,21 +10,6 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
-
-interface ChartPoint {
-  round: string;
-  accuracy: number;
-  loss: number;
-}
-
-function toChartData(snapshots: ModelPerformanceSnapshot[]): ChartPoint[] {
-  return snapshots.map((snapshot) => ({
-    round: `R${snapshot.round}`,
-    accuracy: Math.round(snapshot.accuracy * 100),
-    loss: snapshot.loss,
-  }));
-}
-import { api, type DiseaseMetrics } from '@/lib/api';
 
 export default function ModelPerformanceWidget() {
   const [metrics, setMetrics] = useState<DiseaseMetrics | null>(null);
@@ -54,35 +39,13 @@ export default function ModelPerformanceWidget() {
         ),
       }))
     : [];
-  const [performanceData, setPerformanceData] = useState<ChartPoint[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    api.getModelPerformance()
-      .then((snapshots) => {
-        if (!cancelled) setPerformanceData(toChartData(snapshots));
-      })
-      .catch((error) => {
-        console.error('Failed to load model performance:', error);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   return (
     <div className={styles.card}>
       <div className={styles.header}>
         <div>
           <h3 className={styles.title}>Model Performance</h3>
           <span className={styles.subtitle}>
-            Global model {metric} over rounds
+            CatBoost held-out test-set performance
           </span>
         </div>
         <button className={styles.dropdownSelect} onClick={() => setShowConfusion((v) => !v)}>
@@ -101,10 +64,8 @@ export default function ModelPerformanceWidget() {
       {error && <p style={{ fontSize: 11, color: '#94a3b8', padding: '4px 16px' }}>{error}</p>}
 
       <div className={styles.chartContainer}>
-        {loading ? (
-          <div className={styles.subtitle}>Loading…</div>
-        ) : performanceData.length === 0 ? (
-          <div className={styles.subtitle}>No evaluated rounds yet.</div>
+        {!metrics ? (
+          <div className={styles.subtitle}>Waiting for disease-model metrics…</div>
         ) : (
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
@@ -125,29 +86,16 @@ export default function ModelPerformanceWidget() {
               dy={5}
               interval={0}
             />
-            {metric === 'accuracy' ? (
-              <YAxis
-                domain={[0, 100]}
-                ticks={[0, 25, 50, 75, 100]}
-                tickFormatter={(v) => `${v}%`}
-                tickLine={false}
-                axisLine={{ stroke: '#f1f5f9' }}
-                tick={{ fill: '#64748b', fontSize: 10 }}
-              />
-            ) : (
-              <YAxis
-                domain={[0, 'auto']}
-                tickFormatter={(v) => `${v}`}
-                tickLine={false}
-                axisLine={{ stroke: '#f1f5f9' }}
-                tick={{ fill: '#64748b', fontSize: 10 }}
-              />
-            )}
+            <YAxis
+              domain={[0, 100]}
+              ticks={[0, 25, 50, 75, 100]}
+              tickFormatter={(v) => `${v}%`}
+              tickLine={false}
+              axisLine={{ stroke: '#f1f5f9' }}
+              tick={{ fill: '#64748b', fontSize: 10 }}
+            />
             <Tooltip
-              formatter={(val: any) => [
-                metric === 'accuracy' ? `${val}%` : val,
-                metric === 'accuracy' ? 'Accuracy' : 'Loss',
-              ]}
+              formatter={(value: unknown) => [`${Number(value ?? 0)}%`, 'Recall']}
               contentStyle={{
                 backgroundColor: '#ffffff',
                 border: '1px solid #e2e8f0',
@@ -158,7 +106,7 @@ export default function ModelPerformanceWidget() {
             />
             <Area
               type="monotone"
-              dataKey={metric}
+              dataKey="accuracy"
               stroke="#0d9488"
               strokeWidth={2.2}
               fillOpacity={1}

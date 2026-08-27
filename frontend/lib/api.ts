@@ -290,7 +290,7 @@ export interface FederatedRoundSnapshot {
   synced_nodes: number;
 }
 
-// ---------- XGBoost disease classifier (patient_medical_dataset.csv) ----------
+// ---------- CatBoost disease classifier (patient_medical_dataset_improved.csv) ----------
 
 export interface DiseasePrediction {
   predicted_diagnosis: string;
@@ -329,6 +329,16 @@ export interface FuturePoolPatient extends DiseasePredictionHolder {
   previous_diagnosis: string;
   medical_conditions: string;
   current_symptoms: string[];
+  temperature_c?: number;
+  heart_rate_bpm?: number;
+  systolic_bp?: number;
+  diastolic_bp?: number;
+  blood_glucose_mg_dl?: number;
+  bmi?: number;
+  oxygen_saturation_pct?: number;
+  symptom_duration_days?: number;
+  smoking_status?: string;
+  family_history?: string;
   age: number;
   gender: string;
   hospital: string;
@@ -516,15 +526,25 @@ export const api = {
     });
   },
 
-  // --- DISEASE MODEL (XGBoost, patient_medical_dataset.csv) ---
+  // --- DISEASE MODEL (CatBoost, patient_medical_dataset_improved.csv) ---
   predictDisease: async (input: {
     age: number;
+    temperature_c?: number;
+    heart_rate_bpm?: number;
+    systolic_bp?: number;
+    diastolic_bp?: number;
+    blood_glucose_mg_dl?: number;
+    bmi?: number;
+    oxygen_saturation_pct?: number;
+    symptom_duration_days?: number;
     gender: string;
     previous_diagnosis?: string;
     medical_conditions?: string;
     current_symptoms?: string | string[];
     hospital?: string;
     location?: string;
+    smoking_status?: string;
+    family_history?: string;
     diagnosis_date?: string;
   }): Promise<DiseasePrediction> => {
     return fetcher('/local/patients/predict-disease', { method: 'POST', body: JSON.stringify(input) });

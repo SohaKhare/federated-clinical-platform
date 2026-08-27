@@ -32,7 +32,7 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
 )
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.preprocessing import LabelEncoder
 from catboost import CatBoostClassifier
 
 DATA_PATH = Path(__file__).parents[2] / "data" / "patient_medical_dataset_improved.csv"
@@ -91,7 +91,8 @@ def test_rows() -> pd.DataFrame:
 
 
 def future_pool() -> pd.DataFrame:
-    return _load_frame().iloc[POOL_START:]
+    # POOL_START is a one-based dataset row number; iloc is zero-based.
+    return _load_frame().iloc[POOL_START - 1:]
 
 
 def _date_parts(series: pd.Series) -> pd.DataFrame:
@@ -121,7 +122,7 @@ class DiseaseModel:
         dates = _date_parts(frame[DATE_COLUMN])
         return pd.concat([numeric, categorical, dates], axis=1)[MODEL_FEATURES]
 
-    def _transform(self, frame: pd.DataFrame) -> np.ndarray:
+    def _transform(self, frame: pd.DataFrame) -> pd.DataFrame:
         # CatBoost accepts a DataFrame and uses the categorical column names
         # supplied during fit. Keep this helper for a single inference path.
         return self._raw_features(frame)
@@ -161,7 +162,7 @@ class DiseaseModel:
         )
         self.model = model
 
-        predictions = model.predict(x_test)
+        predictions = model.predict(x_test).astype(int).ravel()
         metrics = {
             "accuracy": float(accuracy_score(y_test, predictions)),
             "precision": float(precision_score(y_test, predictions, average="weighted", zero_division=0)),
@@ -292,7 +293,7 @@ def disease_trends(granularity: str = "month") -> list[dict[str, object]]:
 
 def main() -> None:
     metrics = DiseaseModel().fit()
-    print(f"Trained XGBoost disease classifier: {json.dumps(metrics, indent=2)}")
+    print(f"Trained CatBoost disease classifier: {json.dumps(metrics, indent=2)}")
 
 
 if __name__ == "__main__":

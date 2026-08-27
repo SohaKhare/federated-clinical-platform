@@ -9,11 +9,13 @@ import {
 } from "../../services/local-node-service/disease.service.js";
 
 /**
- * XGBoost disease prediction — replaces the old heart-disease ClinicalModel
- * predict flow for the new patient_medical_dataset.csv feature set.
+ * CatBoost disease prediction over the improved mixed clinical feature set.
  */
 export async function predictDiseasePatient(req: Request, res: Response) {
-  const { age, gender, previous_diagnosis, medical_conditions, current_symptoms, hospital, location, diagnosis_date } =
+  const { age, gender, temperature_c, heart_rate_bpm, systolic_bp, diastolic_bp,
+    blood_glucose_mg_dl, bmi, oxygen_saturation_pct, symptom_duration_days,
+    previous_diagnosis, medical_conditions, current_symptoms, hospital, location,
+    smoking_status, family_history, diagnosis_date } =
     req.body ?? {};
 
   if (!Number.isInteger(age) || age < 0 || typeof gender !== "string") {
@@ -24,11 +26,21 @@ export async function predictDiseasePatient(req: Request, res: Response) {
     const prediction = await predictDisease({
       age,
       gender,
+      temperature_c,
+      heart_rate_bpm,
+      systolic_bp,
+      diastolic_bp,
+      blood_glucose_mg_dl,
+      bmi,
+      oxygen_saturation_pct,
+      symptom_duration_days,
       previous_diagnosis,
       medical_conditions,
       current_symptoms,
       hospital,
       location,
+      smoking_status,
+      family_history,
       diagnosis_date,
     });
     return res.json(prediction);

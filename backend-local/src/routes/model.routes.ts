@@ -17,7 +17,7 @@ router.use(requireAuth, requireRole("local"));
 router.get("/", getModelInfo);
 router.get("/metrics", getModelMetrics);
 
-// XGBoost disease classifier (patient_medical_dataset.csv) — held-out
+// CatBoost disease classifier (patient_medical_dataset_improved.csv) — held-out
 // test-set evaluation metrics and on-demand retraining.
 router.get("/disease-metrics", getDiseaseMetrics);
 router.post("/disease-retrain", retrainDiseaseModel);

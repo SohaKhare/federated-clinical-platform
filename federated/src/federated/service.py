@@ -406,24 +406,28 @@ class Handler(BaseHTTPRequestHandler):
         })
 
     def _disease_predict(self, body: dict[str, object]) -> None:
-        """XGBoost diagnosis prediction from the new medical dataset features."""
+        """CatBoost diagnosis prediction from the improved medical dataset."""
         try:
             model = get_model()
             model.ensure_loaded()
-            row = pd.DataFrame(
-                [
-                    {
-                        "age": float(body.get("age", 0)),
-                        "gender": str(body.get("gender", "Male")),
-                        "previous_diagnosis": str(body.get("previous_diagnosis", "None")),
-                        "medical_conditions": str(body.get("medical_conditions", "None")),
-                        "current_symptoms": str(body.get("current_symptoms", "")),
-                        "hospital": str(body.get("hospital", "")),
-                        "location": str(body.get("location", "")),
-                        "diagnosis_date": str(body.get("diagnosis_date", "")),
-                    }
-                ]
-            )
+            row = pd.DataFrame([{key: body.get(key) for key in (
+                "age", "temperature_c", "heart_rate_bpm", "systolic_bp",
+                "diastolic_bp", "blood_glucose_mg_dl", "bmi",
+                "oxygen_saturation_pct", "symptom_duration_days", "gender",
+                "previous_diagnosis", "medical_conditions", "current_symptoms",
+                "hospital", "location", "smoking_status", "family_history",
+                "diagnosis_date",
+            )}])
+            row["age"] = pd.to_numeric(row["age"], errors="coerce").fillna(0)
+            for column in ("temperature_c", "heart_rate_bpm", "systolic_bp",
+                           "diastolic_bp", "blood_glucose_mg_dl", "bmi",
+                           "oxygen_saturation_pct", "symptom_duration_days"):
+                row[column] = pd.to_numeric(row[column], errors="coerce").fillna(0)
+            for column in ("gender", "previous_diagnosis", "medical_conditions",
+                           "current_symptoms", "hospital", "location",
+                           "smoking_status", "family_history"):
+                row[column] = row[column].fillna("Unknown").astype(str)
+            row["diagnosis_date"] = row["diagnosis_date"].fillna("").astype(str)
             result = model.predict_rows(row)[0]
             self._json(result)
         except FileNotFoundError as error:
@@ -433,7 +437,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(500, "Prediction failed")
 
     def _disease_metrics(self) -> None:
-        metrics_path = Path.cwd() / "models" / "disease_xgb_metrics.json"
+        metrics_path = Path.cwd() / "models" / "disease_catboost_metrics.json"
         if not metrics_path.exists():
             self.send_error(404, "Model not trained yet — POST /federation/disease/train first")
             return
@@ -461,6 +465,16 @@ class Handler(BaseHTTPRequestHandler):
                     "hospital": row["hospital"],
                     "location": row["location"],
                     "diagnosis_date": row["diagnosis_date"],
+                    "temperature_c": float(row["temperature_c"]),
+                    "heart_rate_bpm": float(row["heart_rate_bpm"]),
+                    "systolic_bp": float(row["systolic_bp"]),
+                    "diastolic_bp": float(row["diastolic_bp"]),
+                    "blood_glucose_mg_dl": float(row["blood_glucose_mg_dl"]),
+                    "bmi": float(row["bmi"]),
+                    "oxygen_saturation_pct": float(row["oxygen_saturation_pct"]),
+                    "symptom_duration_days": float(row["symptom_duration_days"]),
+                    "smoking_status": row["smoking_status"],
+                    "family_history": row["family_history"],
                     "actual_diagnosis": row["diagnosis"],
                     "prediction": prediction,
                 }

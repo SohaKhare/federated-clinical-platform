@@ -2,7 +2,7 @@ import { supabase } from "../../config/supabase.js";
 import { env } from "../../config/env.js";
 
 /**
- * Bridge to the XGBoost disease-classifier endpoints exposed by the
+ * Bridge to the CatBoost disease-classifier endpoints exposed by the
  * co-located Python ML service (federated/src/federated/service.py).
  *
  * Dataset contract:
@@ -35,6 +35,16 @@ export interface FuturePoolPatient {
   location: string;
   diagnosis_date: string;
   actual_diagnosis: string;
+  temperature_c?: number;
+  heart_rate_bpm?: number;
+  systolic_bp?: number;
+  diastolic_bp?: number;
+  blood_glucose_mg_dl?: number;
+  bmi?: number;
+  oxygen_saturation_pct?: number;
+  symptom_duration_days?: number;
+  smoking_status?: string;
+  family_history?: string;
   prediction: DiseasePrediction;
 }
 
@@ -79,12 +89,22 @@ async function mlFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 export async function predictDisease(input: {
   age: number;
+  temperature_c?: number;
+  heart_rate_bpm?: number;
+  systolic_bp?: number;
+  diastolic_bp?: number;
+  blood_glucose_mg_dl?: number;
+  bmi?: number;
+  oxygen_saturation_pct?: number;
+  symptom_duration_days?: number;
   gender: string;
   previous_diagnosis?: string;
   medical_conditions?: string;
   current_symptoms?: string | string[];
   hospital?: string;
   location?: string;
+  smoking_status?: string;
+  family_history?: string;
   diagnosis_date?: string;
 }): Promise<DiseasePrediction> {
   return mlFetch<DiseasePrediction>("/federation/disease/predict", {
