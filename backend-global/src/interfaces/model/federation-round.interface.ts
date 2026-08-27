@@ -60,7 +60,8 @@ export interface FederatedRoundCallbackInput {
 
 export interface FederatedRoundBroadcastInput {
   nodeIds?: string[];
-  weights?: unknown;
+  /** Supabase Storage path for the aggregated global model the nodes should pull. */
+  storagePath?: string;
   notes?: string;
 }
 

@@ -227,7 +227,7 @@ function parseBroadcastInput(
 
   return {
     ...(nodeIds ? { nodeIds } : {}),
-    ...(record.weights !== undefined ? { weights: record.weights } : {}),
+    ...(typeof record.storage_path === "string" ? { storagePath: record.storage_path } : {}),
     ...(typeof record.notes === "string" ? { notes: record.notes } : {}),
   };
 }

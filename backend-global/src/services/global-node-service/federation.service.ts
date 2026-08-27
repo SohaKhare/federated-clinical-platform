@@ -323,7 +323,10 @@ async function aggregateRound(record: RoundRecord): Promise<void> {
   }
 
   if (deliveredNodeIds.length > 0) {
-    await broadcastFederatedWeights(record.roundId, { nodeIds: deliveredNodeIds });
+    await broadcastFederatedWeights(record.roundId, {
+      nodeIds: deliveredNodeIds,
+      storagePath: globalStoragePath,
+    });
   }
 }
 
@@ -366,7 +369,7 @@ export async function broadcastFederatedWeights(
 
   const now = new Date();
   const payload = {
-    weights: input.weights ?? null,
+    storage_path: input.storagePath ?? null,
     notes: input.notes ?? null,
   };
 
