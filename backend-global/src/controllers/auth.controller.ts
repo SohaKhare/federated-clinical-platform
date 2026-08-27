@@ -24,8 +24,9 @@ const authCookieOptions = {
  *
  * GET /auth/google
  *
- * Every login creates/authenticates a "local" user. A user is promoted to
- * "global" by manually updating their role in the database.
+ * Every login upserts the authenticating user with this node's own role
+ * (env.nodeRole), so signing in through the global server promotes the
+ * account to "global" automatically.
  */
 export function loginWithGoogle(req: Request, res: Response) {
   // Generate OAuth state to protect against CSRF. There's no server-side
@@ -139,9 +140,9 @@ export async function googleCallback(req: Request, res: Response) {
  * GET /auth/me
  *
  * Re-reads the user's row on every call instead of trusting the token's
- * payload — the JWT only carries a user id, and role is promoted by editing
- * the database directly, so an already-issued token must pick that up
- * without requiring a re-login.
+ * payload — the JWT only carries a user id, and the role lives on the row
+ * (stamped at login from env.nodeRole), so an already-issued token picks up
+ * any changes without requiring a re-login.
  */
 export async function getCurrentUser(req: Request, res: Response) {
   const token = req.cookies?.[env.authCookieName];
@@ -171,7 +172,9 @@ export async function getCurrentUser(req: Request, res: Response) {
   } catch (error) {
     console.error("Failed to load the current user:", error);
 
-    return res.status(500).json({ message: "Unable to load the current user." });
+    return res
+      .status(500)
+      .json({ message: "Unable to load the current user." });
   }
 }
 

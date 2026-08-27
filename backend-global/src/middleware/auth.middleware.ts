@@ -9,9 +9,13 @@ import { getUserById } from "../services/user.service.js";
  * Verifies the JWT in the auth cookie and attaches the current user to
  * `req.user`. The token only carries a user id — the row is re-read on
  * every request, since role/onboarded can change after the token was issued
- * (role is promoted by editing the database directly).
+ * (role is stamped at login from env.nodeRole).
  */
-export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+export async function requireAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   const token = req.cookies?.[env.authCookieName];
   const payload = token ? verifyAuthToken(token) : null;
 
@@ -36,7 +40,9 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   } catch (error) {
     console.error("Failed to resolve authenticated user:", error);
 
-    return res.status(500).json({ message: "Unable to verify the current user." });
+    return res
+      .status(500)
+      .json({ message: "Unable to verify the current user." });
   }
 }
 

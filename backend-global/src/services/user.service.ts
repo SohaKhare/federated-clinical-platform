@@ -1,13 +1,20 @@
 import { supabase } from "../config/supabase.js";
 import { isValidRole } from "../auth/roles.js";
-import type { OnboardingInput, UserSession } from "../interfaces/model/user.interface.js";
+import { env } from "../config/env.js";
+import type {
+  OnboardingInput,
+  UserSession,
+} from "../interfaces/model/user.interface.js";
 import type { Database } from "../types/supabase.js";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
 
 /**
- * All Google logins create a "local" user by default. A user is promoted to
- * "global" by manually updating their role in the database.
+ * Upserts the Google-authenticated user, stamping their row with this node's
+ * own role (env.nodeRole). Logging in via the global server promotes the
+ * account to "global"; logging in via a hospital server sets it back to
+ * "local" — the last node signed into wins, which matches how the frontend
+ * routes requests off the stored role.
  */
 export async function upsertLocalUser(input: {
   googleId: string;
@@ -25,13 +32,14 @@ export async function upsertLocalUser(input: {
   }
 
   if (existing) {
-    // Existing user: refresh profile fields only. Role is never touched here
-    // — it's promoted by manually updating the database, and must survive
-    // every subsequent login.
+    // Existing user: refresh profile fields and align the role with the node
+    // that handled this login, so choosing "Global node" on the login screen
+    // promotes the account automatically — no manual database edits needed.
     const { data, error } = await supabase
       .from("users")
       .update({
         email: input.email,
+        role: env.nodeRole,
         ...(input.picture !== undefined ? { picture: input.picture } : {}),
       })
       .eq("google_id", input.googleId)
@@ -50,7 +58,7 @@ export async function upsertLocalUser(input: {
     .insert({
       google_id: input.googleId,
       email: input.email,
-      role: "local",
+      role: env.nodeRole,
       ...(input.picture !== undefined ? { picture: input.picture } : {}),
     })
     .select()

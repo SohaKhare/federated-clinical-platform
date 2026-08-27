@@ -1,5 +1,7 @@
 import "dotenv/config";
 
+import type { UserRole } from "../auth/roles.js";
+
 const requiredEnv = (name: string): string => {
   const value = process.env[name];
 
@@ -39,6 +41,13 @@ export const env = {
   // other's cookie — the code itself is identical across nodes.
   authCookieName: process.env.AUTH_COOKIE_NAME ?? "fcp_token",
 
+  // Which node this process is. A Google login handled by this server stamps
+  // the authenticating user's row with this role in the shared users table,
+  // so picking a node on the login screen sets the account's role to match —
+  // no manual database edits.
+  nodeRole: (process.env.NODE_ROLE === "global"
+    ? "global"
+    : "local") as UserRole,
 
   frontendUrl: process.env.FRONTEND_URL ?? "http://localhost:3000",
 
