@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "nodemon --exec \"node --import tsx\" src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node --import tsx src/server.ts",
     "test": "echo \"Tests not implemented yet\""
   },
   "keywords": [],
@@ -16,13 +16,15 @@
   "dependencies": {
     "@google/genai": "^2.18.0",
     "@supabase/supabase-js": "^2.112.4",
+    "@types/nodemon": "^1.19.6",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "googleapis": "^176.0.0",
     "jsonwebtoken": "^9.0.3",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "nodemon": "^3.1.14"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
